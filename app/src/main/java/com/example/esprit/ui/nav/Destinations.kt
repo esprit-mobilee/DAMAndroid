@@ -15,4 +15,9 @@ object Destinations {
 
     // 👇 New route for profile/security screen (changer le mot de passe)
     const val PROFILE = "profile"
+
+    const val DOCUMENT_REQUEST_FORM = "document_request_form"
+    const val DOCUMENT_REQUEST_HISTORY = "document_request_history"
+    const val DOCUMENT_REQUEST_DETAIL = "document_request_detail/{requestId}"
+    const val DOCUMENT_VIEWER = "document_viewer/{fileUrl}"
 }

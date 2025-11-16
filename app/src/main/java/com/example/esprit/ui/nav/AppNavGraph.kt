@@ -1,5 +1,6 @@
 package com.example.esprit.ui.nav
 
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -7,12 +8,20 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import com.example.esprit.model.Role
 import com.example.esprit.ui.admin.AdminHomeScreen
 import com.example.esprit.ui.auth.LoginScreen
 import com.example.esprit.ui.auth.LoginViewModel
 import com.example.esprit.ui.auth.SplashScreen
 import com.example.esprit.ui.auth.SplashViewModel
+import com.example.esprit.ui.demande.DocumentRequestDetailScreen
+import com.example.esprit.ui.demande.DocumentRequestDetailViewModel
+import com.example.esprit.ui.demande.DocumentRequestListScreen
+import com.example.esprit.ui.demande.DocumentRequestListViewModel
+import com.example.esprit.ui.demande.DocumentRequestScreen
+import com.example.esprit.ui.demande.DocumentRequestViewModel
+import com.example.esprit.ui.demande.DocumentViewerScreen
 import com.example.esprit.ui.parent.ParentHomeScreen
 import com.example.esprit.ui.shared.AnnouncementListScreen
 import com.example.esprit.ui.shared.ProfileScreen
@@ -62,6 +71,7 @@ fun AppNavGraph(
                 onNavigateTimetable = { navController.navigate(Destinations.TIMETABLE) },
                 onNavigateAbsences = { navController.navigate(Destinations.ABSENCES) },
                 onNavigateAnnouncements = { navController.navigate(Destinations.ANNOUNCEMENTS) },
+                onNavigateDocumentRequests = { navController.navigate(Destinations.DOCUMENT_REQUEST_FORM) },
                 onNavigateProfile = { navController.navigate(Destinations.PROFILE) },
                 onLogout = {
                     navController.navigate(Destinations.LOGIN) {
@@ -132,6 +142,76 @@ fun AppNavGraph(
                 uiState = ui.value,
                 onChangePassword = { old, new -> vm.changePassword(old, new) },
                 onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Destinations.DOCUMENT_REQUEST_FORM) {
+            val vm: DocumentRequestViewModel = hiltViewModel()
+            DocumentRequestScreen(
+                viewModel = vm,
+                onBack = { navController.popBackStack() },
+                onOpenHistory = { navController.navigate(Destinations.DOCUMENT_REQUEST_HISTORY) }
+            )
+        }
+
+        // --- DOCUMENT REQUEST HISTORY ---
+        composable(Destinations.DOCUMENT_REQUEST_HISTORY) {
+            val vm: DocumentRequestListViewModel = hiltViewModel()
+            DocumentRequestListScreen(
+                viewModel = vm,
+                onBack = { navController.popBackStack() },
+                onCreateRequest = { navController.navigate(Destinations.DOCUMENT_REQUEST_FORM) },
+                onRequestClick = { requestId ->
+                    navController.navigate(
+                        Destinations.DOCUMENT_REQUEST_DETAIL.replace("{requestId}", requestId)
+                    )
+                }
+            )
+        }
+
+        // --- DOCUMENT REQUEST DETAIL ---
+        composable(
+            route = Destinations.DOCUMENT_REQUEST_DETAIL,
+            arguments = listOf(navArgument("requestId") {
+                type = androidx.navigation.NavType.StringType
+            })
+        ) { backStackEntry ->
+            val requestId = backStackEntry.arguments?.getString("requestId") ?: ""
+            Log.d("NAV", "Detail screen requestId: $requestId")
+
+            val vm: DocumentRequestDetailViewModel = hiltViewModel()
+            DocumentRequestDetailScreen(
+                requestId = requestId,
+                viewModel = vm,
+                onBack = { navController.popBackStack() },
+                onViewFile = { fileUrl ->
+                    val encodedUrl = java.net.URLEncoder.encode(fileUrl, "UTF-8")
+                    navController.navigate(
+                        Destinations.DOCUMENT_VIEWER.replace("{fileUrl}", encodedUrl)
+                    )
+                }
+            )
+        }
+
+
+        composable(
+            route = Destinations.DOCUMENT_VIEWER,
+            arguments = listOf(navArgument("fileUrl") {
+                type = androidx.navigation.NavType.StringType
+            })
+        ) { backStackEntry ->
+            val encodedUrl = backStackEntry.arguments?.getString("fileUrl") ?: ""
+            val fileUrl = try {
+                java.net.URLDecoder.decode(encodedUrl, "UTF-8")
+            } catch (e: Exception) {
+                encodedUrl
+            }
+            DocumentViewerScreen(
+                fileUrl = fileUrl,
+                onBack = { navController.popBackStack() },
+                onShare = { url ->
+                    // TODO: Implement share functionality
+                }
             )
         }
     }
