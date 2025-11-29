@@ -1,9 +1,7 @@
 package com.example.esprit.di
 
-
 import android.content.Context
 import com.example.esprit.util.DataStoreManager
-
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -14,6 +12,10 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object DataStoreModule {
-    @Provides @Singleton
-    fun provideDataStore(@ApplicationContext ctx: Context) = DataStoreManager(ctx)
+
+    @Provides
+    @Singleton
+    fun provideDataStore(@ApplicationContext ctx: Context): DataStoreManager {
+        return DataStoreManager(ctx)
+    }
 }
