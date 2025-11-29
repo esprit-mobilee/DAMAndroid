@@ -2,15 +2,19 @@ package com.example.esprit.ui.admin
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Announcement
-import androidx.compose.material.icons.filled.Groups
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Notifications   // Annonces
+import androidx.compose.material.icons.filled.Group          // Utilisateurs
+import androidx.compose.material.icons.filled.Person         // Profil
+import androidx.compose.material.icons.filled.Work           // Stages
+import androidx.compose.material.icons.filled.Event          // Événements
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.rememberDrawerState
@@ -27,11 +31,15 @@ import com.example.esprit.ui.components.HeroCard
 import com.example.esprit.ui.theme.BgGray
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AdminHomeScreen(
     onLogout: () -> Unit,
-    onNavigateProfile: () -> Unit = {}
+    onNavigateProfile: () -> Unit = {},
+    onNavigateUsers: () -> Unit = {},
+    onNavigateAnnouncements: () -> Unit = {},
+    onNavigateStages: () -> Unit = {},
+    onNavigateEvents: () -> Unit = {}
 ) {
     val drawerState = rememberDrawerState(initialValue = androidx.compose.material3.DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -46,7 +54,7 @@ fun AdminHomeScreen(
                 destinations = listOf(
                     DrawerDestination(
                         label = "Profil",
-                        icon = { androidx.compose.material3.Icon(Icons.Default.Person, null) },
+                        icon = { Icon(Icons.Default.Person, null) },
                         onClick = {
                             scope.launch { drawerState.close() }
                             onNavigateProfile()
@@ -54,13 +62,19 @@ fun AdminHomeScreen(
                     ),
                     DrawerDestination(
                         label = "Utilisateurs",
-                        icon = { androidx.compose.material3.Icon(Icons.Default.Groups, null) },
-                        onClick = { scope.launch { drawerState.close() } }
+                        icon = { Icon(Icons.Default.Group, null) },
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                            onNavigateUsers()
+                        }
                     ),
                     DrawerDestination(
                         label = "Annonces",
-                        icon = { androidx.compose.material3.Icon(Icons.Default.Announcement, null) },
-                        onClick = { scope.launch { drawerState.close() } }
+                        icon = { Icon(Icons.Default.Notifications, null) },
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                            onNavigateAnnouncements()
+                        }
                     )
                 ),
                 onLogout = {
@@ -86,6 +100,7 @@ fun AdminHomeScreen(
                     .padding(16.dp)
             ) {
                 HeroCard("Bienvenue dans votre Espace")
+
                 Spacer(Modifier.height(16.dp))
 
                 FlowRow(
@@ -93,10 +108,30 @@ fun AdminHomeScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    ActionGridItem("Utilisateurs") { /* CRUD */ }
-                    ActionGridItem("Annonces") { /* CRUD */ }
-                    ActionGridItem("Stages") { /* CRUD */ }
-                    ActionGridItem("Événements") { /* CRUD */ }
+
+                    ActionGridItem(
+                        label = "Utilisateurs",
+                        icon = { Icon(Icons.Default.Group, contentDescription = null) },
+                        onClick = { onNavigateUsers() }
+                    )
+
+                    ActionGridItem(
+                        label = "Annonces",
+                        icon = { Icon(Icons.Default.Notifications, contentDescription = null) },
+                        onClick = { onNavigateAnnouncements() }
+                    )
+
+                    ActionGridItem(
+                        label = "Stages",
+                        icon = { Icon(Icons.Default.Work, contentDescription = null) },
+                        onClick = { onNavigateStages() }
+                    )
+
+                    ActionGridItem(
+                        label = "Événements",
+                        icon = { Icon(Icons.Default.Event, contentDescription = null) },
+                        onClick = { onNavigateEvents() }
+                    )
                 }
             }
         }

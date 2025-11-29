@@ -2,15 +2,17 @@ package com.example.esprit.ui.parent
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Announcement
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.rememberDrawerState
@@ -27,7 +29,7 @@ import com.example.esprit.ui.components.HeroCard
 import com.example.esprit.ui.theme.BgGray
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ParentHomeScreen(
     onLogout: () -> Unit,
@@ -46,7 +48,7 @@ fun ParentHomeScreen(
                 destinations = listOf(
                     DrawerDestination(
                         label = "Profil",
-                        icon = { androidx.compose.material3.Icon(Icons.Default.Person, null) },
+                        icon = { Icon(Icons.Default.Person, null) },
                         onClick = {
                             scope.launch { drawerState.close() }
                             onNavigateProfile()
@@ -54,12 +56,12 @@ fun ParentHomeScreen(
                     ),
                     DrawerDestination(
                         label = "Absences enfant",
-                        icon = { androidx.compose.material3.Icon(Icons.Default.School, null) },
+                        icon = { Icon(Icons.Default.School, null) },
                         onClick = { scope.launch { drawerState.close() } }
                     ),
                     DrawerDestination(
                         label = "Annonces",
-                        icon = { androidx.compose.material3.Icon(Icons.Default.Announcement, null) },
+                        icon = { Icon(Icons.Default.Announcement, null) },
                         onClick = { scope.launch { drawerState.close() } }
                     )
                 ),
@@ -86,15 +88,17 @@ fun ParentHomeScreen(
                     .padding(16.dp)
             ) {
                 HeroCard("Bienvenue dans votre Espace")
+
                 Spacer(Modifier.height(16.dp))
+
                 FlowRow(
                     maxItemsInEachRow = 3,
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    ActionGridItem("Suivi absences") { /* TODO */ }
-                    ActionGridItem("Résultats") { /* TODO */ }
-                    ActionGridItem("Annonces") { /* TODO */ }
+                    ActionGridItem("Suivi absences") { }
+                    ActionGridItem("Résultats") { }
+                    ActionGridItem("Annonces") { }
                 }
             }
         }

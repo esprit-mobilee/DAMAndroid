@@ -8,93 +8,57 @@ import com.example.esprit.util.DataStoreManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class ProfileUiState(
     val isLoading: Boolean = false,
-    val error: String? = null,
-    val success: Boolean = false,
-    val user: User? = null
+    val user: User? = null,
+    val error: String? = null
 )
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
-    private val userRepo: UserRepository,
-    private val dataStore: DataStoreManager
+    private val repo: UserRepository,
+    private val store: DataStoreManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState: StateFlow<ProfileUiState> = _uiState
 
-    /**
-     * Appelé quand l’écran s’ouvre → /me
-     */
+
+    // --------------------------------------------------------------
+    //   LOAD USER  (/auth/me)
+    // --------------------------------------------------------------
     fun loadMe() {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             try {
-                val token = dataStore.tokenFlow.first().orEmpty()
-                if (token.isBlank()) {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = "Token manquant"
-                    )
-                    return@launch
-                }
+                _uiState.value = ProfileUiState(isLoading = true)
 
-                val me = userRepo.getMe(token)
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    user = me
-                )
+                val token = store.getToken()      // ← FIX : We read token from DataStore
+                val me = repo.getMe(token)
+
+                _uiState.value = ProfileUiState(user = me)
+
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = e.message ?: "Erreur inconnue"
-                )
+                _uiState.value = ProfileUiState(error = e.message)
             }
         }
     }
 
-    /**
-     * Changer le mot de passe
-     */
-    fun changePassword(old: String, new: String) {
+
+    // --------------------------------------------------------------
+    //   CHANGE PASSWORD  (/utilisateurs/me/password)
+    // --------------------------------------------------------------
+    fun changePassword(oldPwd: String, newPwd: String) {
         viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(
-                isLoading = true,
-                error = null,
-                success = false
-            )
             try {
-                val token = dataStore.tokenFlow.first().orEmpty()
-                if (token.isBlank()) {
-                    _uiState.value = _uiState.value.copy(
-                        isLoading = false,
-                        error = "Token manquant"
-                    )
-                    return@launch
-                }
+                val token = store.getToken()      // ← OBLIGATOIRE
+                repo.changeMyPassword(token, oldPwd, newPwd)
 
-                userRepo.changeMyPassword(token, old, new)
-
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    success = true
-                )
             } catch (e: Exception) {
-                _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    error = e.message ?: "Erreur inconnue",
-                    success = false
-                )
+                e.printStackTrace()
             }
         }
-    }
-
-    fun clearSuccess() {
-        _uiState.value = _uiState.value.copy(success = false)
     }
 }

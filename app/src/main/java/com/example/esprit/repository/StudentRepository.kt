@@ -1,6 +1,5 @@
 package com.example.esprit.repository
 
-
 import com.example.esprit.network.ApiService
 import javax.inject.Inject
 
@@ -12,5 +11,7 @@ class StudentRepository @Inject constructor(
     suspend fun exams(token: String) = api.getExams("Bearer $token")
     suspend fun results(token: String) = api.getResults("Bearer $token")
     suspend fun internships(token: String) = api.getInternships("Bearer $token")
-    suspend fun announcements(token: String) = api.getAnnouncements("Bearer $token")
+
+    // FIX: no token needed
+    suspend fun announcements() = api.getAnnouncements()
 }

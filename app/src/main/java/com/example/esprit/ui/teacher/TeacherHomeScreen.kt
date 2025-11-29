@@ -2,6 +2,7 @@ package com.example.esprit.ui.teacher
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
@@ -11,6 +12,7 @@ import androidx.compose.material.icons.filled.Announcement
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.rememberDrawerState
@@ -27,7 +29,7 @@ import com.example.esprit.ui.components.HeroCard
 import com.example.esprit.ui.theme.BgGray
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun TeacherHomeScreen(
     onLogout: () -> Unit,
@@ -46,7 +48,7 @@ fun TeacherHomeScreen(
                 destinations = listOf(
                     DrawerDestination(
                         label = "Profil",
-                        icon = { androidx.compose.material3.Icon(Icons.Default.Person, null) },
+                        icon = { Icon(Icons.Default.Person, null) },
                         onClick = {
                             scope.launch { drawerState.close() }
                             onNavigateProfile()
@@ -54,12 +56,12 @@ fun TeacherHomeScreen(
                     ),
                     DrawerDestination(
                         label = "Mes cours",
-                        icon = { androidx.compose.material3.Icon(Icons.Default.Schedule, null) },
+                        icon = { Icon(Icons.Default.Schedule, null) },
                         onClick = { scope.launch { drawerState.close() } }
                     ),
                     DrawerDestination(
                         label = "Annonces",
-                        icon = { androidx.compose.material3.Icon(Icons.Default.Announcement, null) },
+                        icon = { Icon(Icons.Default.Announcement, null) },
                         onClick = { scope.launch { drawerState.close() } }
                     )
                 ),
