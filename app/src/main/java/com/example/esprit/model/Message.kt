@@ -8,4 +8,5 @@ data class Message(
     val receiverId: String,
     val timestamp: String,
     val isMine: Boolean
+
 )
