@@ -1,7 +1,5 @@
 package com.example.esprit.ui.shared
 
-
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,7 +13,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
-import com.example.esprit.ui.shared.AnnouncementsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,8 +25,22 @@ fun AnnouncementAddScreen(
     var audience by remember { mutableStateOf("Tous") }
 
     val audiences = listOf("Tous", "Étudiants", "Administration")
-
     var audienceExpanded by remember { mutableStateOf(false) }
+
+    // observe erreur
+    val errorMessage by vm.errorMessage.collectAsState()
+
+    // popup si erreur
+    if (errorMessage != null) {
+        AlertDialog(
+            onDismissRequest = { vm.clearError() },
+            confirmButton = {
+                TextButton(onClick = { vm.clearError() }) { Text("OK") }
+            },
+            title = { Text("Action impossible") },
+            text = { Text(errorMessage ?: "") }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -37,7 +48,11 @@ fun AnnouncementAddScreen(
                 title = { Text("Nouvelle annonce") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Retour", tint = Color.White)
+                        Icon(
+                            Icons.Default.ArrowBack,
+                            contentDescription = "Retour",
+                            tint = Color.White
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -66,12 +81,13 @@ fun AnnouncementAddScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
             ) {
+
                 Column(
                     modifier = Modifier.padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
 
-                    // TITRE
+                    // Titre
                     OutlinedTextField(
                         value = title,
                         onValueChange = { title = it },
@@ -83,7 +99,7 @@ fun AnnouncementAddScreen(
                         )
                     )
 
-                    // CONTENU
+                    // Contenu
                     OutlinedTextField(
                         value = content,
                         onValueChange = { content = it },
@@ -97,7 +113,7 @@ fun AnnouncementAddScreen(
                         )
                     )
 
-                    // AUDIENCE - DROPDOWN PREMIUM
+                    // Audience
                     ExposedDropdownMenuBox(
                         expanded = audienceExpanded,
                         onExpandedChange = { audienceExpanded = !audienceExpanded }
@@ -107,16 +123,10 @@ fun AnnouncementAddScreen(
                             onValueChange = {},
                             readOnly = true,
                             label = { Text("Audience") },
-                            modifier = Modifier
-                                .menuAnchor()
-                                .fillMaxWidth(),
+                            modifier = Modifier.menuAnchor().fillMaxWidth(),
                             trailingIcon = {
                                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = audienceExpanded)
-                            },
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Color(0xFFD9352A),
-                                focusedLabelColor = Color(0xFFD9352A)
-                            )
+                            }
                         )
 
                         ExposedDropdownMenu(
@@ -143,8 +153,9 @@ fun AnnouncementAddScreen(
 
             Button(
                 onClick = {
-                    vm.addAnnouncement(title, content, audience)
-                    navController.popBackStack()
+                    vm.addAnnouncement(title, content, audience) { success ->
+                        if (success) navController.popBackStack()
+                    }
                 },
                 enabled = isEnabled,
                 modifier = Modifier

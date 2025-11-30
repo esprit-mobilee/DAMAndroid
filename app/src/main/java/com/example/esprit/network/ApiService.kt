@@ -2,6 +2,9 @@ package com.example.esprit.network
 
 import com.example.esprit.model.*
 import retrofit2.http.*
+import com.example.esprit.model.UploadResponse
+import okhttp3.MultipartBody
+
 
 interface ApiService {
 
@@ -108,4 +111,21 @@ interface ApiService {
     suspend fun sendMessage(
         @Body req: SendMessageRequest
     ): MessageDto
+    // liste des conversations d'un utilisateur
+    @GET("messages/conversations")
+    suspend fun getConversations(
+        @Query("userId") userId: String
+    ): List<ConversationResponse>
+    @Multipart
+    @POST("messages/upload-audio")
+    suspend fun uploadAudio(
+        @Part file: MultipartBody.Part
+    ): UploadResponse
+    @Multipart
+    @POST("messages/upload")
+    suspend fun uploadMessageFile(
+        @Part file: MultipartBody.Part
+    ): UploadResponse
+
+
 }

@@ -124,14 +124,14 @@ fun AppNavGraph(
         // ANNOUNCEMENTS LIST
         // --------------------------------------------------------------------
         composable(Destinations.ANNOUNCEMENTS) {
-            AnnouncementListScreen(navController)
+            AnnouncementsScreen(navController)
         }
 
         // --------------------------------------------------------------------
         // ANNOUNCEMENT ADD
         // --------------------------------------------------------------------
         composable(Destinations.ANNOUNCEMENT_ADD) {
-            AnnouncementAddScreen(navController)
+            AnnouncementCreateScreen(navController)
         }
 
         // --------------------------------------------------------------------
