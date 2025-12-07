@@ -88,7 +88,10 @@ fun StudentHomeScreen(
                 ),
                 onLogout = {
                     scope.launch { drawerState.close() }
-                    onLogout()
+                    // Nettoyer le token avant de naviguer
+                    profileViewModel.logout {
+                        onLogout()
+                    }
                 }
             )
         }

@@ -20,4 +20,8 @@ object Destinations {
     const val DOCUMENT_REQUEST_HISTORY = "document_request_history"
     const val DOCUMENT_REQUEST_DETAIL = "document_request_detail/{requestId}"
     const val DOCUMENT_VIEWER = "document_viewer/{fileUrl}"
+
+    // Admin Requests
+    const val ADMIN_DOCUMENT_REQUESTS = "admin_document_requests"
+    const val ADMIN_DOCUMENT_REQUEST_DETAIL = "admin_document_request_detail/{requestId}"
 }

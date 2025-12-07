@@ -20,11 +20,21 @@ data class DocumentRequestListUiState(
     val requests: List<DocumentRequestItem> = emptyList(),
     val files: List<DocumentFileItem> = emptyList(),
     val isDeleting: Boolean = false,
-    val deleteError: String? = null
+    val deleteError: String? = null,
+    val searchYear: String = ""
 ) {
     fun hasFile(requestId: String): Boolean {
         return files.any { it.documentRequestId == requestId && it.url != null }
     }
+    
+    val filteredRequests: List<DocumentRequestItem>
+        get() = if (searchYear.isBlank()) {
+            requests
+        } else {
+            requests.filter { 
+                it.annee.contains(searchYear, ignoreCase = true)
+            }
+        }
 }
 
 @HiltViewModel
@@ -101,6 +111,10 @@ class DocumentRequestListViewModel @Inject constructor(
 
     fun clearErrors() {
         _uiState.update { it.copy(error = null, deleteError = null) }
+    }
+    
+    fun updateSearchYear(year: String) {
+        _uiState.update { it.copy(searchYear = year) }
     }
 }
 

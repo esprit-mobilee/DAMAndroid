@@ -121,4 +121,19 @@ interface ApiService {
         @Path("requestId") requestId: String,
         @Header("Authorization") token: String
     ): DocumentFileItem
+
+    @PATCH("document-request/{id}/status")
+    suspend fun updateDocumentRequestStatus(
+        @Path("id") id: String,
+        @Body body: Map<String, String>, // { status, rejectionReason }
+        @Header("Authorization") token: String
+    ): DocumentRequestItem
+
+    @retrofit2.http.Multipart
+    @POST("document-request/{id}/file")
+    suspend fun uploadDocumentRequestFile(
+        @Path("id") id: String,
+        @retrofit2.http.Part file: okhttp3.MultipartBody.Part,
+        @Header("Authorization") token: String
+    ): DocumentRequestItem
 }

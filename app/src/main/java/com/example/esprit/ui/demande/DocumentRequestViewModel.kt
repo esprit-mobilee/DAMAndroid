@@ -26,7 +26,7 @@ data class DocumentRequestUiState(
     val formValues: Map<String, String> = emptyMap(),
     val availableTypes: List<String> = SUPPORTED_DOCUMENT_TYPES,
     val selectedType: String = SUPPORTED_DOCUMENT_TYPES.first(),
-    val annee: String = "",
+    val annee: String = if (SUPPORTED_DOCUMENT_TYPES.first().lowercase() == "attestation") "2025" else "",
     val fileUrl: String = "",
     val created: DocumentRequestItem? = null,
     val createdFileUrl: String? = null
@@ -53,7 +53,9 @@ class DocumentRequestViewModel @Inject constructor(
                 fields = emptyList(),
                 formValues = emptyMap(),
                 successMessage = null,
-                error = null
+                error = null,
+                // Définir automatiquement l'année à 2025 pour attestation
+                annee = if (type.lowercase() == "attestation") "2025" else it.annee
             )
         }
         loadFields(type)
@@ -68,6 +70,10 @@ class DocumentRequestViewModel @Inject constructor(
     }
 
     fun updateAnnee(value: String) {
+        // Empêcher la modification de l'année si le type est attestation
+        if (_uiState.value.selectedType.lowercase() == "attestation") {
+            return
+        }
         _uiState.update { it.copy(annee = value) }
     }
 

@@ -89,7 +89,7 @@ fun DocumentViewerScreen(
                         }
                         // Load PDF using Google Docs viewer or direct URL
                         val pdfUrl = if (fileUrl.startsWith("http")) {
-                            "https://docs.google.com/viewer?url=${java.net.URLEncoder.encode(fileUrl, "UTF-8")}&embedded=true"
+                            "https://view.officeapps.live.com/op/view.aspx?src=${java.net.URLEncoder.encode(fileUrl, "UTF-8")}"
                         } else {
                             fileUrl
                         }

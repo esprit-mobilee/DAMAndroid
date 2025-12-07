@@ -49,7 +49,9 @@ fun AppNavGraph(
                     }
                 },
                 onAuthenticated = { role ->
-                    navController.navigate(roleToRoute(role)) {
+                    val destination = roleToRoute(role)
+                    Log.d("AppNavGraph", "Splash authenticated - Role: $role, Navigating to: $destination")
+                    navController.navigate(destination) {
                         popUpTo(0)
                     }
                 }
@@ -59,7 +61,9 @@ fun AppNavGraph(
         // --- LOGIN ---
         composable(Destinations.LOGIN) {
             LoginScreen(viewModel = loginViewModel) { role ->
-                navController.navigate(roleToRoute(role)) {
+                val destination = roleToRoute(role)
+                Log.d("AppNavGraph", "Login success - Role: $role, Navigating to: $destination")
+                navController.navigate(destination) {
                     popUpTo(0)
                 }
             }
@@ -109,11 +113,70 @@ fun AppNavGraph(
         composable(Destinations.ADMIN_HOME) {
             AdminHomeScreen(
                 onNavigateProfile = { navController.navigate(Destinations.PROFILE) },
+                onNavigateToRequests = { navController.navigate(Destinations.ADMIN_DOCUMENT_REQUESTS) },
                 onLogout = {
                     navController.navigate(Destinations.LOGIN) {
                         popUpTo(0)
                     }
                 }
+            )
+        }
+
+        composable(Destinations.ADMIN_DOCUMENT_REQUESTS) {
+            com.example.esprit.ui.admin.requests.AdminDocumentRequestListScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToDetail = { id ->
+                    navController.navigate(
+                        Destinations.ADMIN_DOCUMENT_REQUEST_DETAIL.replace("{requestId}", id)
+                    )
+                }
+            )
+        }
+
+        composable(
+            route = Destinations.ADMIN_DOCUMENT_REQUEST_DETAIL,
+            arguments = listOf(navArgument("requestId") { type = androidx.navigation.NavType.StringType })
+        ) { backStackEntry ->
+            // Use the same ViewModel instance if scoped to graph, or let Hilt provide a new one.
+            // For simplicity, we let Hilt provide one. If we needed shared state, we'd scope it.
+            // Here we just pass the ID via the ViewModel's saved state handle or load it.
+            // The ViewModel we built doesn't take ID in constructor but has a load method.
+            // Ideally we should pass it or have the VM read from SavedStateHandle.
+            // But our VM has `selectRequest` which we called in the list.
+            // However, `hiltViewModel()` gives a scoped instance. If we want to share data between List and Detail,
+            // we need to scope them to a navigation graph or pass data.
+            // Our VM `AdminDocumentRequestViewModel` is used in both.
+            // If we use `hiltViewModel()` in both, they might be different instances unless scoped.
+            // Let's check if we can scope it or if we should just reload.
+            // The `AdminDocumentRequestViewModel` has `selectRequest`.
+            // If we get a new instance, `selectedRequest` will be null.
+            // So we should probably load the request by ID in the detail screen if it's null.
+            // But our VM doesn't have `loadRequestById`.
+            // Let's update the VM to support loading by ID or just rely on the list being loaded.
+            // Actually, `hiltViewModel(backStackEntry)` would be scoped to the entry.
+            // To share, we need a parent entry.
+            // For now, let's assume we can reload or we need to update VM.
+            // Wait, I didn't add `loadRequestById` to `AdminDocumentRequestViewModel`.
+            // I should probably add it or pass the request data.
+            // Or better, since I'm in the same flow, I can try to scope the ViewModel to the navigation graph if possible.
+            // But simpler: Update VM to load by ID.
+            
+            // Let's just add the composable for now and I will update the VM to be robust.
+            val requestId = backStackEntry.arguments?.getString("requestId") ?: ""
+            val viewModel: com.example.esprit.ui.admin.requests.AdminDocumentRequestViewModel = hiltViewModel()
+            
+            // We need to ensure the request is loaded. 
+            // If we came from List, we might have it in memory if the VM is shared (it's not by default between composables).
+            // So we should trigger a load.
+            LaunchedEffect(requestId) {
+                 if (viewModel.uiState.value.selectedRequest?.id != requestId) {
+                     viewModel.loadRequest(requestId)
+                 }
+            }
+            
+            com.example.esprit.ui.admin.requests.AdminDocumentRequestDetailScreen(
+                viewModel = viewModel,
+                onBack = { navController.popBackStack() }
             )
         }
 

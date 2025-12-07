@@ -97,4 +97,22 @@ class ProfileViewModel @Inject constructor(
     fun clearSuccess() {
         _uiState.value = _uiState.value.copy(success = false)
     }
+
+    /**
+     * Logout - Nettoie le token du DataStore
+     */
+    fun logout(onComplete: () -> Unit) {
+        viewModelScope.launch {
+            try {
+                // Nettoyer le token
+                dataStore.saveToken(null)
+                android.util.Log.d("ProfileVM", "Token cleared successfully")
+                onComplete()
+            } catch (e: Exception) {
+                android.util.Log.e("ProfileVM", "Error during logout: ${e.message}", e)
+                // Même en cas d'erreur, on continue le logout
+                onComplete()
+            }
+        }
+    }
 }

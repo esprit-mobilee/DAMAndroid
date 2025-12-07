@@ -33,5 +33,18 @@ class DocumentRequestRepository @Inject constructor(
 
     suspend fun getRequestFile(token: String, requestId: String) =
         api.getDocumentRequestFile(requestId, "Bearer $token")
+
+    suspend fun updateStatus(token: String, id: String, status: String, reason: String? = null) =
+        api.updateDocumentRequestStatus(
+            id,
+            mapOf("status" to status).let {
+                if (reason != null) it + ("rejectionReason" to reason) else it
+            },
+            "Bearer $token"
+        )
+
+    suspend fun uploadFile(token: String, id: String, filePart: okhttp3.MultipartBody.Part) =
+        api.uploadDocumentRequestFile(id, filePart, "Bearer $token")
 }
+
 
