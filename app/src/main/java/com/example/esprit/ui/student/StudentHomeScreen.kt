@@ -31,6 +31,7 @@ fun StudentHomeScreen(
     onNavigateTimetable: () -> Unit,
     onNavigateAbsences: () -> Unit,
     onNavigateAnnouncements: () -> Unit,
+    onNavigateDocumentRequests: () -> Unit,
     onNavigateProfile: () -> Unit,
     onLogout: () -> Unit,
     // 👇 we inject the VM here
@@ -87,7 +88,10 @@ fun StudentHomeScreen(
                 ),
                 onLogout = {
                     scope.launch { drawerState.close() }
-                    onLogout()
+                    // Nettoyer le token avant de naviguer
+                    profileViewModel.logout {
+                        onLogout()
+                    }
                 }
             )
         }
@@ -118,6 +122,7 @@ fun StudentHomeScreen(
                 ) {
                     ActionGridItem("Emploi du temps", onClick = onNavigateTimetable)
                     ActionGridItem("Absences", onClick = onNavigateAbsences)
+                    ActionGridItem("Demandes de documents", onClick = onNavigateDocumentRequests)
                     ActionGridItem("Examens") { /* TODO */ }
                     ActionGridItem("Résultats") { /* TODO */ }
                     ActionGridItem("Stages") { /* TODO */ }

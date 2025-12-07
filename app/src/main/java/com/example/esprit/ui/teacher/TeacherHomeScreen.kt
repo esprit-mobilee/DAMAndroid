@@ -18,12 +18,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.esprit.model.Role
 import com.example.esprit.ui.components.ActionGridItem
 import com.example.esprit.ui.components.DrawerDestination
 import com.example.esprit.ui.components.EspritDrawer
 import com.example.esprit.ui.components.EspritTopBar
 import com.example.esprit.ui.components.HeroCard
+import com.example.esprit.ui.shared.ProfileViewModel
 import com.example.esprit.ui.theme.BgGray
 import kotlinx.coroutines.launch
 
@@ -31,7 +33,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun TeacherHomeScreen(
     onLogout: () -> Unit,
-    onNavigateProfile: () -> Unit = {}
+    onNavigateProfile: () -> Unit = {},
+    profileViewModel: ProfileViewModel = hiltViewModel()
 ) {
     val drawerState = rememberDrawerState(initialValue = androidx.compose.material3.DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -65,7 +68,10 @@ fun TeacherHomeScreen(
                 ),
                 onLogout = {
                     scope.launch { drawerState.close() }
-                    onLogout()
+                    // Nettoyer le token avant de naviguer
+                    profileViewModel.logout {
+                        onLogout()
+                    }
                 }
             )
         }

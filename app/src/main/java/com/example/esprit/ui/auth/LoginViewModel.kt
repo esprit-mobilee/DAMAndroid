@@ -37,14 +37,23 @@ class LoginViewModel @Inject constructor(
 
                 // 3) sécuriser le champ role (peut être null ou vide)
                 val backendRole = res.role?.uppercase() ?: "STUDENT"
+                
+                // 🔍 Debug logging
+                android.util.Log.d("LoginVM", "Backend role (raw): '${res.role}'")
+                android.util.Log.d("LoginVM", "Backend role (uppercase): '$backendRole'")
 
                 val role = when (backendRole) {
                     "STUDENT" -> Role.STUDENT
                     "TEACHER" -> Role.TEACHER
                     "PARENT"  -> Role.PARENT
                     "ADMIN"   -> Role.ADMIN
-                    else      -> Role.STUDENT   // fallback
+                    else      -> {
+                        android.util.Log.e("LoginVM", "Unknown role: '$backendRole', defaulting to STUDENT")
+                        Role.STUDENT   // fallback
+                    }
                 }
+                
+                android.util.Log.d("LoginVM", "Mapped to Role: $role")
 
                 // 4) navigation
                 onSuccess(role)

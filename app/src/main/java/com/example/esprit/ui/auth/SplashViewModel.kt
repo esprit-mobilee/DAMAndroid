@@ -26,14 +26,21 @@ class SplashViewModel @Inject constructor(
                     val user = repo.me(token)
 
                     // ✅ Map the backend string role -> our enum Role
+                    android.util.Log.d("SplashVM", "Backend role string: '${user.role}'")
+                    android.util.Log.d("SplashVM", "After uppercase: '${user.role.uppercase()}'")
+                    
                     val role = when (user.role.uppercase()) {
                         "STUDENT" -> Role.STUDENT
                         "TEACHER" -> Role.TEACHER
                         "PARENT"  -> Role.PARENT
                         "ADMIN"   -> Role.ADMIN
-                        else      -> Role.STUDENT // fallback if unknown
+                        else      -> {
+                            android.util.Log.e("SplashVM", "Unknown role: ${user.role.uppercase()}, defaulting to STUDENT")
+                            Role.STUDENT // fallback if unknown
+                        }
                     }
-
+                    
+                    android.util.Log.d("SplashVM", "Mapped to Role: $role")
                     onResult(true, role)
                 } catch (e: Exception) {
                     onResult(false, null)

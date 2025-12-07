@@ -8,7 +8,8 @@ data class User(
     val email: String? = null,
     val role: String,
     val studentId: String? = null,
-    val classGroup: String? = null
+    val classGroup: String? = null,
+    val inscriptionPaid: Boolean = false // Statut de paiement des frais d'inscription
 ) {
     val fullName: String
         get() = when {
