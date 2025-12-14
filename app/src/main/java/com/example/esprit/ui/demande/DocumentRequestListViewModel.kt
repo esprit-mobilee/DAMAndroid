@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.example.esprit.service.SmartMessage
+import com.example.esprit.service.SmartPredictionService
 import javax.inject.Inject
 
 data class DocumentRequestListUiState(
@@ -21,7 +23,8 @@ data class DocumentRequestListUiState(
     val files: List<DocumentFileItem> = emptyList(),
     val isDeleting: Boolean = false,
     val deleteError: String? = null,
-    val searchYear: String = ""
+    val searchYear: String = "",
+    val smartMessage: SmartMessage? = null
 ) {
     fun hasFile(requestId: String): Boolean {
         return files.any { it.documentRequestId == requestId && it.url != null }
@@ -40,13 +43,17 @@ data class DocumentRequestListUiState(
 @HiltViewModel
 class DocumentRequestListViewModel @Inject constructor(
     private val repository: DocumentRequestRepository,
-    private val dataStore: DataStoreManager
+    private val dataStore: DataStoreManager,
+    private val smartPredictionService: SmartPredictionService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DocumentRequestListUiState())
     val uiState: StateFlow<DocumentRequestListUiState> = _uiState
 
     fun loadRequests() {
+        // Update smart message on load
+        _uiState.update { it.copy(smartMessage = smartPredictionService.getSmartTip()) }
+        
         viewModelScope.launch {
             val token = dataStore.tokenFlow.first().orEmpty()
             if (token.isBlank()) {

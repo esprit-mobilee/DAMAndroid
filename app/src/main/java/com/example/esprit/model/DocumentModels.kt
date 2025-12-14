@@ -39,7 +39,9 @@ data class DocumentRequestItem(
     val updatedAt: String? = null,
     val details: Map<String, Any>? = null,
     val status: String = "PENDING", // PENDING, APPROVED, REJECTED
-    val rejectionReason: String? = null
+    val rejectionReason: String? = null,
+    val documentReference: String? = null,
+    val verificationHash: String? = null
 ) {
     // Propriété calculée pour obtenir l'objet User
     val user: DocumentRequestUser?

@@ -218,9 +218,37 @@ class DocumentRequestDetailViewModel @Inject constructor(
                     ?: context.filesDir
                 val outputFile = java.io.File(documentsDir, fileName)
                 
-                val success = PdfGenerator.generateAttestationPdf(request, outputFile)
+                val signatureData = PdfGenerator.generateAttestationPdf(context, request, outputFile)
                 
-                if (success) {
+                if (signatureData != null) {
+                    // Update backend with the generated reference if needed
+                    if (request.documentReference == null) {
+                       try {
+                           val token = dataStore.tokenFlow.first().orEmpty()
+                           if (token.isNotBlank()) {
+                               Log.d("DetailVM", "Saving document reference to backend: ${signatureData.documentReference}")
+                               repository.updateReference(
+                                   token, 
+                                   request.id, 
+                                   signatureData.documentReference, 
+                                   signatureData.verificationHash
+                               )
+                               // Update local request with new reference
+                               _uiState.update { state -> 
+                                   state.copy(
+                                       request = state.request?.copy(
+                                           documentReference = signatureData.documentReference,
+                                           verificationHash = signatureData.verificationHash
+                                       )
+                                   )
+                               }
+                           }
+                       } catch (e: Exception) {
+                           Log.e("DetailVM", "Error saving document reference", e)
+                           // We continue even if saving fails, but warn?
+                       }
+                    }
+
                     val uri = FileProvider.getUriForFile(
                         context,
                         "${context.packageName}.fileprovider",

@@ -14,6 +14,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.example.esprit.service.SmartMessage
+import com.example.esprit.service.SmartPredictionService
 import javax.inject.Inject
 
 private val SUPPORTED_DOCUMENT_TYPES = listOf("attestation", "relevé", "convention")
@@ -29,20 +31,31 @@ data class DocumentRequestUiState(
     val annee: String = if (SUPPORTED_DOCUMENT_TYPES.first().lowercase() == "attestation") "2025" else "",
     val fileUrl: String = "",
     val created: DocumentRequestItem? = null,
-    val createdFileUrl: String? = null
+    val createdFileUrl: String? = null,
+    val estimatedTime: String = "",
+    val smartMessage: SmartMessage? = null
 )
 
 @HiltViewModel
 class DocumentRequestViewModel @Inject constructor(
     private val repository: DocumentRequestRepository,
-    private val dataStore: DataStoreManager
+    private val dataStore: DataStoreManager,
+    private val smartPredictionService: SmartPredictionService
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DocumentRequestUiState())
     val uiState: StateFlow<DocumentRequestUiState> = _uiState
 
     init {
-        loadFields(_uiState.value.selectedType)
+        // Load initial smart message
+        val initialType = _uiState.value.selectedType
+        _uiState.update { 
+            it.copy(
+                smartMessage = smartPredictionService.getSmartTip(),
+                estimatedTime = smartPredictionService.getEstimatedProcessingTime(initialType)
+            ) 
+        }
+        loadFields(initialType)
     }
 
     fun selectType(type: String) {
@@ -54,8 +67,8 @@ class DocumentRequestViewModel @Inject constructor(
                 formValues = emptyMap(),
                 successMessage = null,
                 error = null,
-                // Définir automatiquement l'année à 2025 pour attestation
-                annee = if (type.lowercase() == "attestation") "2025" else it.annee
+                annee = if (type.lowercase() == "attestation") "2025" else it.annee,
+                estimatedTime = smartPredictionService.getEstimatedProcessingTime(type)
             )
         }
         loadFields(type)

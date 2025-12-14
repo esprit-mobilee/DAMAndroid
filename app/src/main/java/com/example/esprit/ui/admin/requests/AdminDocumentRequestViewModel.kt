@@ -211,9 +211,9 @@ class AdminDocumentRequestViewModel @Inject constructor(
                     ?: context.filesDir
                 val outputFile = java.io.File(documentsDir, fileName)
                 
-                val success = PdfGenerator.generateAttestationPdf(request, outputFile)
+                val signatureData = PdfGenerator.generateAttestationPdf(context, request, outputFile)
                 
-                if (success) {
+                if (signatureData != null) {
                     val uri = FileProvider.getUriForFile(
                         context,
                         "${context.packageName}.fileprovider",
@@ -283,9 +283,9 @@ class AdminDocumentRequestViewModel @Inject constructor(
                     ?: context.filesDir
                 val outputFile = java.io.File(documentsDir, fileName)
                 
-                val pdfSuccess = PdfGenerator.generateAttestationPdf(request, outputFile)
+                val signatureData = PdfGenerator.generateAttestationPdf(context, request, outputFile)
                 
-                if (!pdfSuccess) {
+                if (signatureData == null) {
                     _uiState.update { 
                         it.copy(
                             isGeneratingPdf = false,
@@ -294,6 +294,19 @@ class AdminDocumentRequestViewModel @Inject constructor(
                         )
                     }
                     return@launch
+                }
+
+                // Update backend with signature data first
+                try {
+                     repository.updateReference(
+                         token, 
+                         request.id, 
+                         signatureData.documentReference, 
+                         signatureData.verificationHash
+                     )
+                } catch(e: Exception) {
+                     android.util.Log.e("AdminVM", "Failed to update reference: ${e.message}")
+                     // Proceed anyway? Or stop? Proceeding is safer for now.
                 }
 
                 // Step 2: Get URI for viewing

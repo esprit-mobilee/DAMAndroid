@@ -1,5 +1,8 @@
 package com.example.esprit.util
 
+import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -22,7 +25,7 @@ object PdfGenerator {
     private const val MARGIN_RIGHT = 50f
     private const val MARGIN_TOP = 50f
     
-    fun generateAttestationPdf(request: DocumentRequestItem, outputFile: File): Boolean {
+    fun generateAttestationPdf(context: Context, request: DocumentRequestItem, outputFile: File): DocumentSignatureGenerator.SignatureData? {
         return try {
             val pdfDocument = PdfDocument()
             val pageInfo = PdfDocument.PageInfo.Builder(PAGE_WIDTH, PAGE_HEIGHT, 1).create()
@@ -40,8 +43,8 @@ object PdfGenerator {
             // Draw body
             yPosition = drawBody(canvas, yPosition, request)
             
-            // Draw footer
-            drawFooter(canvas, request)
+            // Draw footer with signature and get the data used
+            val signatureData = drawFooter(context, canvas, request)
             
             pdfDocument.finishPage(page)
             
@@ -51,10 +54,10 @@ object PdfGenerator {
             }
             pdfDocument.close()
             
-            true
+            signatureData
         } catch (e: Exception) {
             e.printStackTrace()
-            false
+            null
         }
     }
     
@@ -173,37 +176,158 @@ object PdfGenerator {
         return yPos
     }
     
-    private fun drawFooter(canvas: Canvas, request: DocumentRequestItem) {
+    
+    private fun drawFooter(context: Context, canvas: Canvas, request: DocumentRequestItem): DocumentSignatureGenerator.SignatureData {
         val paint = Paint().apply {
             color = Color.BLACK
             textSize = 11f
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
         }
         
-        val footerY = PAGE_HEIGHT - 200f
+        var footerY = PAGE_HEIGHT - 380f // Augmenté pour faire de la place pour la signature
         
-        // Date
-        val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.FRENCH)
-        val currentDate = dateFormat.format(Date())
-        val dateText = "Fait le $currentDate"
-        val dateWidth = paint.measureText(dateText)
-        canvas.drawText(dateText, PAGE_WIDTH - MARGIN_RIGHT - dateWidth, footerY, paint)
+        // ========== SIGNATURE SECTION ==========
         
-        // Department head title
+        // Generate signature data
+        val signatureData = DocumentSignatureGenerator.generateSignatureData(
+            studentId = request.user?.studentId ?: "N/A",
+            existingReference = request.documentReference,
+            existingHash = request.verificationHash
+        )
+        
+        // Generate QR code
+        val qrCodeBitmap = DocumentSignatureGenerator.generateQRCode(
+            content = signatureData.verificationUrl,
+            size = 120
+        )
+        
+        // Draw signature section border
+        val borderPaint = Paint().apply {
+            color = Color.LTGRAY
+            style = Paint.Style.STROKE
+            strokeWidth = 1f
+        }
+        val signatureBoxLeft = MARGIN_LEFT
+        val signatureBoxTop = footerY - 20
+        val signatureBoxRight = PAGE_WIDTH - MARGIN_RIGHT
+        val signatureBoxBottom = footerY + 170 // Augmenté pour la signature image
+        
+        canvas.drawRect(
+            signatureBoxLeft,
+            signatureBoxTop,
+            signatureBoxRight,
+            signatureBoxBottom,
+            borderPaint
+        )
+        
+        // Title of signature section
+        paint.textSize = 9f
         paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-        val titleText = "Chef Département de la scolarité"
-        val titleWidth = paint.measureText(titleText)
-        canvas.drawText(titleText, PAGE_WIDTH - MARGIN_RIGHT - titleWidth, footerY + 20, paint)
+        canvas.drawText("CERTIFICATION DE L'AUTHENTICITÉ", signatureBoxLeft + 10, footerY, paint)
         
-        // Name
-        val nameText = "M.Mohamed Ali BOUAKLINE"
-        val nameWidth = paint.measureText(nameText)
-        canvas.drawText(nameText, PAGE_WIDTH - MARGIN_RIGHT - nameWidth, footerY + 40, paint)
+        footerY += 20
         
-        // Bottom info
+        // Document reference
+        paint.textSize = 9f
+        paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+        canvas.drawText("Référence: ${signatureData.documentReference}", signatureBoxLeft + 10, footerY, paint)
+        
+        footerY += 15
+        
+        // Approval date
+        val dateFormat = SimpleDateFormat("dd/MM/yyyy 'à' HH:mm", Locale.FRENCH)
+        val approvalDateStr = dateFormat.format(signatureData.approvalDate)
+        canvas.drawText("Approuvé le: $approvalDateStr", signatureBoxLeft + 10, footerY, paint)
+        
+        footerY += 15
+        
+        // Approved by
+        canvas.drawText("Par: ${signatureData.adminName}", signatureBoxLeft + 10, footerY, paint)
+        
+        footerY += 15
+        
+        // Verification code
         paint.textSize = 8f
+        canvas.drawText("Code de vérification: VER-${signatureData.verificationHash}", signatureBoxLeft + 10, footerY, paint)
+        
+        // Draw QR code if generated successfully
+        if (qrCodeBitmap != null) {
+            val qrX = PAGE_WIDTH - MARGIN_RIGHT - 130
+            val qrY = signatureBoxTop + 25
+            canvas.drawBitmap(qrCodeBitmap, qrX, qrY, null)
+            
+            // QR code label
+            paint.textSize = 7f
+            paint.textAlign = Paint.Align.CENTER
+            canvas.drawText("Scannez pour", qrX + 60, qrY + 135, paint)
+            canvas.drawText("vérifier", qrX + 60, qrY + 145, paint)
+            paint.textAlign = Paint.Align.LEFT
+        }
+        
+        footerY += 30
+        
+        // Admin signature section
+        paint.textSize = 10f
+        paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+        canvas.drawText(signatureData.adminTitle, signatureBoxLeft + 10, footerY, paint)
+        
+        footerY += 15
+        
+        paint.textSize = 10f
+        canvas.drawText(signatureData.adminName, signatureBoxLeft + 10, footerY, paint)
+        
+        footerY += 10
+        
+        // ========== HANDWRITTEN SIGNATURE IMAGE ==========
+        try {
+            // Load signature image from resources
+            val signatureBitmap = BitmapFactory.decodeResource(
+                context.resources,
+                context.resources.getIdentifier("signature_admin", "drawable", context.packageName)
+            )
+            
+            if (signatureBitmap != null) {
+                // Scale signature to appropriate size
+                val signatureWidth = 150f
+                val signatureHeight = (signatureBitmap.height.toFloat() / signatureBitmap.width.toFloat()) * signatureWidth
+                
+                val scaledSignature = Bitmap.createScaledBitmap(
+                    signatureBitmap,
+                    signatureWidth.toInt(),
+                    signatureHeight.toInt(),
+                    true
+                )
+                
+                // Draw signature image
+                canvas.drawBitmap(
+                    scaledSignature,
+                    signatureBoxLeft + 10,
+                    footerY + 5,
+                    null
+                )
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            // Si l'image ne peut pas être chargée, afficher simplement "(Signature)"
+            paint.textSize = 9f
+            paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.ITALIC)
+            canvas.drawText("(Signature)", signatureBoxLeft + 10, footerY + 20, paint)
+        }
+        
+        // Warning text
+        paint.textSize = 7f
+        paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.ITALIC)
+        paint.color = Color.rgb(100, 100, 100)
+        canvas.drawText("⚠ Ce document peut être vérifié en ligne à: verify.esprit.tn", 
+            signatureBoxLeft + 10, signatureBoxBottom + 15, paint)
+        
+        // Reset paint color
+        paint.color = Color.BLACK
         paint.typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
         
+        // ========== SCHOOL INFO AT BOTTOM ==========
+        
+        paint.textSize = 8f
         val bottomY = PAGE_HEIGHT - 80f
         canvas.drawText("Agrément du Ministère de l'enseignement supérieur sous le N° 03/2003", MARGIN_LEFT, bottomY, paint)
         canvas.drawText("www.esprit.tn - E-mail : contact@esprit.tn", MARGIN_LEFT, bottomY + 15, paint)
@@ -213,5 +337,7 @@ object PdfGenerator {
         
         val contactText = "Tél: 71 947 641 - Fax: 71 941 889"
         canvas.drawText(contactText, MARGIN_LEFT, bottomY + 45, paint)
+        
+        return signatureData
     }
 }

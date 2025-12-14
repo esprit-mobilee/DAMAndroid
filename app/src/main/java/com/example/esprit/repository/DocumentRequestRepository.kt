@@ -45,6 +45,16 @@ class DocumentRequestRepository @Inject constructor(
 
     suspend fun uploadFile(token: String, id: String, filePart: okhttp3.MultipartBody.Part) =
         api.uploadDocumentRequestFile(id, filePart, "Bearer $token")
+
+    suspend fun updateReference(token: String, id: String, reference: String, hash: String) =
+        api.updateDocumentReference(
+            id,
+            mapOf(
+                "documentReference" to reference,
+                "verificationHash" to hash
+            ),
+            "Bearer $token"
+        )
 }
 
 

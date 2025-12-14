@@ -23,6 +23,8 @@ import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -65,6 +67,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.esprit.connect.ui.theme.EspritTheme
 import com.example.esprit.model.DocumentField
 import com.example.esprit.model.DocumentRequestItem
+import com.example.esprit.service.SmartMessage
+import com.example.esprit.ui.demande.components.SmartInfoCard
 import com.example.esprit.util.DateFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -126,6 +130,11 @@ fun DocumentRequestScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Smart Tip Banner
+            uiState.smartMessage?.let { msg ->
+                SmartInfoCard(message = msg)
+            }
+
             // Type Selector with better labels
             Surface(
                 shape = RoundedCornerShape(12.dp),
@@ -138,6 +147,27 @@ fun DocumentRequestScreen(
                         selectedType = uiState.selectedType,
                         onTypeSelected = viewModel::selectType
                     )
+                    
+                    if (uiState.estimatedTime.isNotBlank()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Schedule,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "Temps de traitement estimé : ${uiState.estimatedTime}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.secondary,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
                 }
             }
 
@@ -477,5 +507,6 @@ private fun getDocumentTypeLabel(type: String): String {
         else -> type.replaceFirstChar { it.uppercase() }
     }
 }
+
 
 

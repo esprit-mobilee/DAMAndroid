@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -66,6 +67,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.esprit.ui.demande.components.DocumentRequestCard
+import com.example.esprit.ui.demande.components.SmartInfoCard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -217,6 +219,12 @@ fun DocumentRequestListScreen(
                         .padding(innerPadding)
                         .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
                 ) {
+                    uiState.smartMessage?.let { 
+                        Box(modifier = Modifier.padding(16.dp)) {
+                            SmartInfoCard(message = it)
+                        }
+                    }
+
                     // Statistics Card
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
@@ -454,3 +462,4 @@ fun StatItem(
         }
     }
 }
+

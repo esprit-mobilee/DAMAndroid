@@ -136,4 +136,10 @@ interface ApiService {
         @retrofit2.http.Part file: okhttp3.MultipartBody.Part,
         @Header("Authorization") token: String
     ): DocumentRequestItem
+    @PATCH("document-request/{id}")
+    suspend fun updateDocumentReference(
+        @Path("id") id: String,
+        @Body body: Map<String, String>, // { documentReference, verificationHash }
+        @Header("Authorization") token: String
+    ): DocumentRequestItem
 }
