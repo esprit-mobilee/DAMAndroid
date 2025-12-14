@@ -381,9 +381,13 @@ fun InternshipOfferDetailScreen(
                     Column(Modifier.padding(16.dp)) {
                          if (!isAdmin) {
                              Button(
-                                 onClick = { onApplyClick?.invoke(offer.id!!) },
+                                 onClick = { offer.id?.let { id -> onApplyClick?.invoke(id) } },
+                                 enabled = offer.id != null,
                                  modifier = Modifier.fillMaxWidth().height(50.dp),
-                                 colors = ButtonDefaults.buttonColors(containerColor = DetailColors.EspritRed),
+                                 colors = ButtonDefaults.buttonColors(
+                                     containerColor = DetailColors.EspritRed,
+                                     disabledContainerColor = Color.Gray
+                                 ),
                                  shape = RoundedCornerShape(12.dp)
                              ) {
                                  Text("Postuler maintenant", fontSize = 16.sp, fontWeight = FontWeight.Bold)

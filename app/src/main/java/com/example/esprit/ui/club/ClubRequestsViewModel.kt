@@ -38,7 +38,7 @@ class ClubRequestsViewModel @Inject constructor(
             // First get club ID from home()
             if (clubId == null) {
                 when (val res = repo.home()) {
-                    is UiState.Success -> clubId = res.data.id
+                    is UiState.Success<*> -> clubId = (res.data as? com.example.esprit.model.club.ClubHomeDto)?.id
                     is UiState.Error -> {
                         _uiState.value = _uiState.value.copy(loading = false, error = res.message)
                         return@launch
@@ -50,10 +50,11 @@ class ClubRequestsViewModel @Inject constructor(
             val id = clubId ?: return@launch
 
             when (val res = repo.getPendingRequests(id)) {
-                is UiState.Success -> {
+                is UiState.Success<*> -> {
+                   val data = res.data as? List<JoinRequestDto> ?: emptyList()
                    _uiState.value = _uiState.value.copy(
                        loading = false,
-                       requests = res.data ?: emptyList()
+                       requests = data
                    )
                 }
                 is UiState.Error -> {
@@ -67,7 +68,7 @@ class ClubRequestsViewModel @Inject constructor(
     fun approve(requestId: String) {
         viewModelScope.launch {
             when (val res = repo.approveRequest(requestId)) {
-                is UiState.Success -> {
+                is UiState.Success<*> -> {
                     loadRequests() // Refresh list
                     _uiState.value = _uiState.value.copy(message = "Demande acceptée")
                 }
@@ -80,7 +81,7 @@ class ClubRequestsViewModel @Inject constructor(
     fun reject(requestId: String) {
         viewModelScope.launch {
             when (val res = repo.rejectRequest(requestId)) {
-                is UiState.Success -> {
+                is UiState.Success<*> -> {
                     loadRequests()
                     _uiState.value = _uiState.value.copy(message = "Demande refusée")
                 }

@@ -47,18 +47,20 @@ class ClubHomeViewModel @Inject constructor(
                 Log.d("ClubHomeViewModel", "Repository result: $res")
 
                 when (res) {
-                    is UiState.Success -> {
-                        Log.d("ClubHomeViewModel", "Success! Club: ${res.data?.name}")
-                        _uiState.value = ClubHomeUiState(club = res.data, loading = false)
+                    is UiState.Success<*> -> {
+                        val data = res.data as? ClubHomeDto
+                        Log.d("ClubHomeViewModel", "Success! Club: ${data?.name}")
+                        _uiState.value = ClubHomeUiState(club = data, loading = false)
                         
-                        // Fetch unread notifications count
-                        when (val unreadRes = notificationsRepo.getUnreadCount(res.data.id)) {
-                            is UiState.Success -> {
-                                _uiState.value = _uiState.value.copy(
-                                    unreadCount = unreadRes.data["unreadCount"] ?: 0
-                                )
+                        data?.let { clubData ->
+                            when (val unreadRes = notificationsRepo.getUnreadCount(clubData.id)) {
+                                is UiState.Success<*> -> {
+                                    _uiState.value = _uiState.value.copy(
+                                        unreadCount = (unreadRes.data as? Map<String, Int>)?.get("unreadCount") ?: 0
+                                    )
+                                }
+                                else -> {}
                             }
-                            else -> {}
                         }
                     }
                     is UiState.Error -> {
@@ -89,9 +91,8 @@ class ClubHomeViewModel @Inject constructor(
             val imagePart = uriToMultipartBody(imageUri, context, "profileImage")
             val result = repo.updateProfileImage(clubId, imagePart)
             
-            // Refresh club data on success
-            if (result is UiState.Success) {
-                _uiState.value = _uiState.value.copy(club = result.data)
+            if (result is UiState.Success<*>) {
+                _uiState.value = _uiState.value.copy(club = result.data as? ClubHomeDto)
             }
             
             result
@@ -110,9 +111,8 @@ class ClubHomeViewModel @Inject constructor(
             val imagePart = uriToMultipartBody(imageUri, context, "coverImage")
             val result = repo.updateCoverImage(clubId, imagePart)
             
-            // Refresh club data on success
-            if (result is UiState.Success) {
-                _uiState.value = _uiState.value.copy(club = result.data)
+            if (result is UiState.Success<*>) {
+                _uiState.value = _uiState.value.copy(club = result.data as? ClubHomeDto)
             }
             
             result

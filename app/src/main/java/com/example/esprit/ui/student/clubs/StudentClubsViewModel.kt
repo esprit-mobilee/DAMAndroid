@@ -36,10 +36,11 @@ class StudentClubsViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(loading = true, error = null)
             when (val res = repo.getAllClubs()) {
-                is UiState.Success -> {
+                is UiState.Success<*> -> {
+                    val clubs = res.data as? List<ClubHomeDto>
                     _uiState.value = _uiState.value.copy(
                         loading = false,
-                        clubs = res.data ?: emptyList()
+                        clubs = clubs ?: emptyList()
                     )
                 }
                 is UiState.Error -> {
@@ -78,7 +79,7 @@ class StudentClubsViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(loading = true) // Optional: show loading
             when (val res = repo.joinClub(clubId, answers)) {
-                is UiState.Success -> {
+                is UiState.Success<*> -> {
                     loadClubs()
                     dismissDialog()
                 }

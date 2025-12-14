@@ -76,11 +76,15 @@ fun ContactListScreen(
                     items(filteredContacts) { contact ->
                         ContactItem(
                             name = contact.name ?: "${contact.firstName} ${contact.lastName}",
-                            role = contact.role,
+                            role = contact.role.toString(),
                             onClick = {
+                                val partnerName = contact.name
+                                    ?: listOfNotNull(contact.firstName, contact.lastName).joinToString(" ")
+                                    .ifEmpty { "Unknown User" }
+
                                 val route = Destinations.privateChatRoute(
-                                    contact.id,
-                                    contact.name ?: "${contact.firstName} ${contact.lastName}"
+                                    partnerId = contact.id ?: "",
+                                    name = partnerName
                                 )
                                 navController.navigate(route) {
                                     // Remove contact list from back stack so back goes to Message List

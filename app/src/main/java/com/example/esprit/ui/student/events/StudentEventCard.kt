@@ -45,7 +45,7 @@ fun StudentEventCard(
                     val baseUrl = Constants.BASE_URL.replace("/api/", "")
                     "$baseUrl$imageUrl"
                 }
-                
+
                 Image(
                     painter = rememberAsyncImagePainter(fullImageUrl),
                     contentDescription = null,
@@ -56,7 +56,7 @@ fun StudentEventCard(
                     contentScale = ContentScale.Crop
                 )
             }
-            
+
             // Event Details
             Column(
                 modifier = Modifier.padding(16.dp),
@@ -70,7 +70,7 @@ fun StudentEventCard(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-                
+
                 // Date
                 event.date?.let { date ->
                     Row(
@@ -90,13 +90,13 @@ fun StudentEventCard(
                         )
                     }
                 }
-                
+
                 // Location
                 LocationDisplay(
                     location = event.location,
                     textColor = Color.Gray
                 )
-                
+
                 // Description
                 event.description?.let { description ->
                     Text(
@@ -107,7 +107,7 @@ fun StudentEventCard(
                         color = Color.DarkGray
                     )
                 }
-                
+
                 // Category Badge
                 event.category?.let { category ->
                     Surface(
@@ -122,7 +122,7 @@ fun StudentEventCard(
                         )
                     }
                 }
-                
+
                 // Register Button
                 if (event.registrationOpen) {
                     Button(

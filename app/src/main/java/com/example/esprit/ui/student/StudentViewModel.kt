@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.esprit.model.TimetableItem
 import com.example.esprit.repository.StudentRepository
-import com.example.esprit.util.Resource
+import com.example.esprit.util.UiState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -17,8 +17,8 @@ class StudentViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _timetable =
-        MutableStateFlow<Resource<List<TimetableItem>>>(Resource.Loading)
-    val timetable: StateFlow<Resource<List<TimetableItem>>> = _timetable
+        MutableStateFlow<UiState<List<TimetableItem>>>(UiState.Loading)
+    val timetable: StateFlow<UiState<List<TimetableItem>>> = _timetable
 
     init {
         loadTimetable()
@@ -26,13 +26,12 @@ class StudentViewModel @Inject constructor(
 
     fun loadTimetable() {
         viewModelScope.launch {
-            _timetable.value = Resource.Loading
+            _timetable.value = UiState.Loading
             try {
-                // ✅ no token needed anymore
-                val res = repo.timetable()
-                _timetable.value = Resource.Success(res)
+                // repo.timetable() returns UiState directly
+                _timetable.value = repo.timetable()
             } catch (e: Exception) {
-                _timetable.value = Resource.Error(e.message ?: "Erreur")
+                _timetable.value = UiState.Error(e.message ?: "Erreur")
             }
         }
     }

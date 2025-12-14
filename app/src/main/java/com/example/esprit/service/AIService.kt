@@ -26,7 +26,7 @@ object AIService {
     
     // ⚠️ API Key hardcoded for testing - DO NOT COMMIT TO GIT
     // For production, revert to BuildConfig.OPENAI_API_KEY
-    private val apiKey: String = "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"
+    private val apiKey: String = BuildConfig.OPENAI_API_KEY
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)

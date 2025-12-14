@@ -71,6 +71,7 @@ class SplashViewModel @Inject constructor(
                 "ADMIN" -> Role.ADMIN
                 "TEACHER" -> Role.TEACHER
                 "PARENT" -> Role.PARENT
+                "CLUB" -> Role.CLUB
                 "PRESIDENT" -> Role.STUDENT
                 "STUDENT", "USER" -> Role.STUDENT
                 else -> Role.STUDENT

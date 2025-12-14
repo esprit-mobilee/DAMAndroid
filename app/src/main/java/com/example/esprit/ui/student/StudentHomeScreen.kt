@@ -40,9 +40,11 @@ fun StudentHomeScreen(
     onNavigateAbsences: () -> Unit,
     onNavigateAnnouncements: () -> Unit,
     onNavigateProfile: () -> Unit,
-    onNavigateVieEtudiante: () -> Unit,
     onNavigateStages: () -> Unit,
     onNavigateAIChat: () -> Unit,
+    onNavigateClubs: () -> Unit,
+    onNavigateMessages: () -> Unit,
+    onNavigateClubChat: (String) -> Unit, // New callback
     onLogout: () -> Unit,
     profileViewModel: ProfileViewModel = hiltViewModel()
 ) {
@@ -56,7 +58,7 @@ fun StudentHomeScreen(
 
     val userRoles = ui.user?.roles ?: emptyList()
     val primaryRole = userRoles.firstOrNull() ?: Role.STUDENT
-    val isPresident = userRoles.contains(Role.PRESIDENT)
+
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -78,9 +80,24 @@ fun StudentHomeScreen(
                         icon = { Icon(Icons.Default.Email, null) },
                         onClick = {
                             scope.launch { drawerState.close() }
+                            onNavigateMessages()
                         }
                     )
                 )
+                // CLUB CHAT
+                val clubId = ui.user?.presidentOf ?: ui.user?.club
+                if (!clubId.isNullOrBlank()) {
+                    add(
+                        DrawerDestination(
+                            label = "Discussion de groupe",
+                            icon = { Icon(Icons.Default.Email, null) },
+                            onClick = {
+                                scope.launch { drawerState.close() }
+                                onNavigateClubChat(clubId)
+                            }
+                        )
+                    )
+                }
                 add(
                     DrawerDestination(
                         label = "Emploi du temps",
@@ -91,17 +108,7 @@ fun StudentHomeScreen(
                         }
                     )
                 )
-                if (isPresident) {
-                    add(
-                        DrawerDestination(
-                            label = "Mon club",
-                            icon = { Icon(Icons.Default.Person, null) },
-                            onClick = {
-                                scope.launch { drawerState.close() }
-                            }
-                        )
-                    )
-                }
+
             }
 
             EspritDrawer(
@@ -246,20 +253,20 @@ fun StudentHomeScreen(
                         },
                         onClick = onNavigateAnnouncements
                     )
-                    
                     ActionGridItem(
-                        label = "Vie étudiante",
+                        label = "CLUBS",
                         icon = {
                             Icon(
-                                Icons.Default.Person,
+                                Icons.Default.Email,
                                 contentDescription = null,
                                 tint = Color(0xFFD32F2F),
                                 modifier = Modifier.size(28.dp)
                             )
                         },
-                        onClick = onNavigateVieEtudiante
+                        onClick = onNavigateClubs
                     )
-                    
+
+
                     ActionGridItem(
                         label = "Assistant Stage (IA)",
                         icon = {

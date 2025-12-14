@@ -39,10 +39,12 @@ class StudentFeedViewModel @Inject constructor(
 
     private fun loadCurrentUser() {
         viewModelScope.launch {
-            when (val res = studentRepo.getMe()) {
-                is UiState.Success -> _currentUserId.value = res.data.id
-                else -> {}
-            }
+             val userRes = studentRepo.getMe()
+            val userId = if (userRes is UiState.Success<*>) {
+                val user = userRes.data as? com.example.esprit.model.User
+                _currentUserId.value = user?.id
+                user?.id
+            } else null
         }
     }
 
@@ -50,8 +52,9 @@ class StudentFeedViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(loading = true, error = null)
             when (val res = studentRepo.getFeed()) {
-                is UiState.Success -> {
-                    _uiState.value = StudentFeedUiState(posts = res.data ?: emptyList())
+                is UiState.Success<*> -> {
+                    val posts = res.data as? List<ClubPostDto>
+                    _uiState.value = StudentFeedUiState(posts = posts ?: emptyList())
                 }
                 is UiState.Error -> {
                     _uiState.value = StudentFeedUiState(error = res.message)
@@ -64,7 +67,7 @@ class StudentFeedViewModel @Inject constructor(
     fun likePost(postId: String) {
         viewModelScope.launch {
             when (val res = postsRepo.like(postId)) {
-                is UiState.Success -> updatePostInList(res.data)
+                is UiState.Success<*> -> updatePostInList(res.data as? ClubPostDto)
                 else -> {} // Handle error
             }
         }
@@ -73,7 +76,7 @@ class StudentFeedViewModel @Inject constructor(
     fun dislikePost(postId: String) {
         viewModelScope.launch {
             when (val res = postsRepo.dislike(postId)) {
-                is UiState.Success -> updatePostInList(res.data)
+                is UiState.Success<*> -> updatePostInList(res.data as? ClubPostDto)
                 else -> {}
             }
         }
@@ -82,7 +85,7 @@ class StudentFeedViewModel @Inject constructor(
     fun deletePost(postId: String) {
         viewModelScope.launch {
             when (postsRepo.delete(postId)) {
-                is UiState.Success -> {
+                is UiState.Success<*> -> {
                     // Remove from list
                     val currentList = _uiState.value.posts.toMutableList()
                     currentList.removeAll { it.id == postId }
@@ -97,7 +100,7 @@ class StudentFeedViewModel @Inject constructor(
         viewModelScope.launch {
             val contentBody = RequestBody.create(MultipartBody.FORM, content)
             when (val res = postsRepo.update(postId, contentBody, null)) {
-                is UiState.Success -> updatePostInList(res.data)
+                is UiState.Success<*> -> updatePostInList(res.data as? ClubPostDto)
                 else -> {}
             }
         }
@@ -106,7 +109,7 @@ class StudentFeedViewModel @Inject constructor(
     fun commentPost(postId: String, content: String) {
         viewModelScope.launch {
             when (val res = postsRepo.comment(postId, content)) {
-                is UiState.Success -> updatePostInList(res.data)
+                is UiState.Success<*> -> updatePostInList(res.data as? ClubPostDto)
                 else -> {}
             }
         }
@@ -115,7 +118,7 @@ class StudentFeedViewModel @Inject constructor(
     fun updateComment(postId: String, commentId: String, content: String) {
         viewModelScope.launch {
             when (val res = postsRepo.updateComment(postId, commentId, content)) {
-                is UiState.Success -> updatePostInList(res.data)
+                is UiState.Success<*> -> updatePostInList(res.data as? ClubPostDto)
                 else -> {}
             }
         }
@@ -124,7 +127,7 @@ class StudentFeedViewModel @Inject constructor(
     fun deleteComment(postId: String, commentId: String) {
         viewModelScope.launch {
             when (val res = postsRepo.deleteComment(postId, commentId)) {
-                is UiState.Success -> updatePostInList(res.data)
+                is UiState.Success<*> -> updatePostInList(res.data as? ClubPostDto)
                 else -> {}
             }
         }
@@ -133,7 +136,7 @@ class StudentFeedViewModel @Inject constructor(
     fun reactToComment(postId: String, commentId: String, emoji: String) {
         viewModelScope.launch {
             when (val res = postsRepo.reactToComment(postId, commentId, emoji)) {
-                is UiState.Success -> updatePostInList(res.data)
+                is UiState.Success<*> -> updatePostInList(res.data as? ClubPostDto)
                 else -> {}
             }
         }
@@ -142,7 +145,7 @@ class StudentFeedViewModel @Inject constructor(
     fun replyToComment(postId: String, commentId: String, content: String) {
         viewModelScope.launch {
             when (val res = postsRepo.replyToComment(postId, commentId, content)) {
-                is UiState.Success -> updatePostInList(res.data)
+                is UiState.Success<*> -> updatePostInList(res.data as? ClubPostDto)
                 else -> {}
             }
         }

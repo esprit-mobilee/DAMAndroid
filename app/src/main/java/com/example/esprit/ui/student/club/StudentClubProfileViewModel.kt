@@ -47,8 +47,8 @@ class StudentClubProfileViewModel @Inject constructor(
 
             // 2. Load Club Details
             when (val clubRes = studentRepo.getClubDetails(clubId)) {
-                is UiState.Success -> {
-                    val rawClub = clubRes.data
+                is UiState.Success<*> -> {
+                    val rawClub = clubRes.data as? ClubHomeDto ?: return@launch
                     
                     // 3. Compute Membership Status
                     // Backend findOne might not return 'membershipStatus', so we force compute it if we have the user
@@ -82,8 +82,9 @@ class StudentClubProfileViewModel @Inject constructor(
     private fun loadPosts(clubId: String) {
         viewModelScope.launch {
             when (val postsRes = postsRepo.list(clubId)) {
-                is UiState.Success -> {
-                    _uiState.value = _uiState.value.copy(posts = postsRes.data ?: emptyList())
+                is UiState.Success<*> -> {
+                    val posts = postsRes.data as? List<ClubPostDto>
+                    _uiState.value = _uiState.value.copy(posts = posts ?: emptyList())
                 }
                 else -> {}
             }
@@ -93,7 +94,7 @@ class StudentClubProfileViewModel @Inject constructor(
     fun joinClub(clubId: String) {
         viewModelScope.launch {
             when (studentRepo.joinClub(clubId)) {
-                is UiState.Success -> {
+                is UiState.Success<*> -> {
                     // Reload club to update join status
                     loadClub(clubId)
                 }
@@ -105,7 +106,7 @@ class StudentClubProfileViewModel @Inject constructor(
     fun likePost(postId: String) {
         viewModelScope.launch {
             when (val res = postsRepo.like(postId)) {
-                is UiState.Success -> updatePostInList(res.data)
+                is UiState.Success<*> -> updatePostInList(res.data as? ClubPostDto)
                 else -> {}
             }
         }
@@ -114,7 +115,7 @@ class StudentClubProfileViewModel @Inject constructor(
     fun dislikePost(postId: String) {
         viewModelScope.launch {
             when (val res = postsRepo.dislike(postId)) {
-                is UiState.Success -> updatePostInList(res.data)
+                is UiState.Success<*> -> updatePostInList(res.data as? ClubPostDto)
                 else -> {}
             }
         }
@@ -123,7 +124,7 @@ class StudentClubProfileViewModel @Inject constructor(
     fun commentPost(postId: String, content: String) {
         viewModelScope.launch {
             when (val res = postsRepo.comment(postId, content)) {
-                is UiState.Success -> updatePostInList(res.data)
+                is UiState.Success<*> -> updatePostInList(res.data as? ClubPostDto)
                 else -> {}
             }
         }
@@ -132,7 +133,7 @@ class StudentClubProfileViewModel @Inject constructor(
     fun updateComment(postId: String, commentId: String, content: String) {
         viewModelScope.launch {
             when (val res = postsRepo.updateComment(postId, commentId, content)) {
-                is UiState.Success -> updatePostInList(res.data)
+                is UiState.Success<*> -> updatePostInList(res.data as? ClubPostDto)
                 else -> {}
             }
         }
@@ -141,7 +142,7 @@ class StudentClubProfileViewModel @Inject constructor(
     fun deleteComment(postId: String, commentId: String) {
         viewModelScope.launch {
             when (val res = postsRepo.deleteComment(postId, commentId)) {
-                is UiState.Success -> updatePostInList(res.data)
+                is UiState.Success<*> -> updatePostInList(res.data as? ClubPostDto)
                 else -> {}
             }
         }
@@ -150,7 +151,7 @@ class StudentClubProfileViewModel @Inject constructor(
     fun reactToComment(postId: String, commentId: String, emoji: String) {
         viewModelScope.launch {
             when (val res = postsRepo.reactToComment(postId, commentId, emoji)) {
-                is UiState.Success -> updatePostInList(res.data)
+                is UiState.Success<*> -> updatePostInList(res.data as? ClubPostDto)
                 else -> {}
             }
         }
@@ -159,7 +160,7 @@ class StudentClubProfileViewModel @Inject constructor(
     fun replyToComment(postId: String, commentId: String, content: String) {
         viewModelScope.launch {
             when (val res = postsRepo.replyToComment(postId, commentId, content)) {
-                is UiState.Success -> updatePostInList(res.data)
+                is UiState.Success<*> -> updatePostInList(res.data as? ClubPostDto)
                 else -> {}
             }
         }

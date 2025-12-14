@@ -13,7 +13,7 @@ class MembersRepository @Inject constructor(
     suspend fun list(): UiState<List<ClubMemberDto>> = safeCall {
         val user = api.getMe()
         val clubId = user.presidentOf ?: user.club ?: throw Exception("User is not associated with any club")
-        api.getClubMembers(clubId)
+        api.getClubMembersDto(clubId)
     }
     
     suspend fun remove(userId: String): UiState<Unit> = safeCall {

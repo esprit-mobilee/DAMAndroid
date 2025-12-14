@@ -20,7 +20,14 @@ data class User(
 
     val studentId: String? = null,
     val classGroup: String? = null,
-    val profileImageUrl: String? = null
+    val profileImageUrl: String? = null,
+    
+    // Club Branch additions
+    val presidentOf: String? = null,
+    val club: String? = null,
+    val identifiant: String? = null,
+    val isOnline: Boolean = false,
+    val lastSeen: String? = null
 ) {
     val fullName: String
         get() = when {

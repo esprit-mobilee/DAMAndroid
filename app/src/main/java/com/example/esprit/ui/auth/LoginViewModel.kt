@@ -73,6 +73,8 @@ class LoginViewModel @Inject constructor(
             if (listRoles.contains(Role.PARENT)) return Role.PARENT
             if (listRoles.contains(Role.PRESIDENT)) return Role.STUDENT
             if (listRoles.contains(Role.STUDENT)) return Role.STUDENT
+            if (listRoles.contains(Role.CLUB)) return Role.CLUB
+
         }
 
         if (!stringRole.isNullOrBlank()) {
@@ -81,7 +83,9 @@ class LoginViewModel @Inject constructor(
                 "TEACHER" -> Role.TEACHER
                 "PARENT" -> Role.PARENT
                 "PRESIDENT" -> Role.STUDENT
+                "CLUB" -> Role.CLUB
                 "STUDENT", "USER" -> Role.STUDENT
+
                 else -> Role.STUDENT
             }
         }

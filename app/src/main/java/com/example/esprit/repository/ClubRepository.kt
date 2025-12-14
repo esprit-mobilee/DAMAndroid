@@ -1,119 +1,100 @@
 package com.example.esprit.repository
 
-import com.example.esprit.model.Club
-import com.example.esprit.model.User
+import com.example.esprit.model.club.ClubHomeDto
 import com.example.esprit.network.ApiService
-import com.example.esprit.util.MultipartUtil
+import com.example.esprit.network.safeCall
+import com.example.esprit.util.UiState
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
+import okhttp3.RequestBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
 class ClubRepository @Inject constructor(
     private val api: ApiService
 ) {
-
-    // --------------------------------------------------
-    // GET ALL CLUBS
-    // --------------------------------------------------
-    suspend fun getClubs(): Result<List<Club>> = runCatching {
-        api.getClubs()
+    suspend fun home(): UiState<ClubHomeDto> = safeCall {
+        val user = api.getMe()
+        val clubId = user.presidentOf ?: user.club ?: throw Exception("User is not associated with any club")
+        api.getClub(clubId)
     }
 
-    // --------------------------------------------------
-    // GET CLUB BY ID
-    // --------------------------------------------------
-    suspend fun getClubById(id: String): Result<Club> = runCatching {
-        api.getClubById(id)
-    }
-
-    // --------------------------------------------------
-    // CREATE CLUB  (multipart)
-    // --------------------------------------------------
-    suspend fun createClub(
+    suspend fun updateProfile(
+        clubId: String,
         name: String,
-        description: String? = null,
-        presidentIdentifiant: String? = null,
-        tags: List<String> = emptyList(),
-        imagePart: MultipartBody.Part? = null
-    ): Result<Club> = runCatching {
-        val tagsString = tags.joinToString(", ").takeIf { it.isNotBlank() }
-
-        api.createClub(
-            image = imagePart,
-            name = MultipartUtil.textPart(name),
-            description = MultipartUtil.nullableTextPart(description),
-            president = MultipartUtil.nullableTextPart(presidentIdentifiant),
-            tags = MultipartUtil.nullableTextPart(tagsString)
-        )
-    }
-
-    // --------------------------------------------------
-    // UPDATE CLUB  (multipart)
-    // --------------------------------------------------
-    suspend fun updateClub(
-        id: String,
-        name: String?,
         description: String?,
-        presidentIdentifiant: String?,
-        tags: List<String>,
-        imagePart: MultipartBody.Part? = null
-    ): Result<Club> = runCatching {
-        val tagsString = tags.joinToString(", ").takeIf { it.isNotBlank() }
-
-        api.updateClub(
-            id = id,
-            image = imagePart,
-            name = name?.let { MultipartUtil.textPart(it) },
-            description = MultipartUtil.nullableTextPart(description),
-            president = MultipartUtil.nullableTextPart(presidentIdentifiant),
-            tags = MultipartUtil.nullableTextPart(tagsString)
+        tags: String?,
+        profileImage: MultipartBody.Part?,
+        coverImage: MultipartBody.Part?
+    ): UiState<ClubHomeDto> = safeCall {
+        api.updateClubProfile(
+            id = clubId,
+            name = name.toPlainText(),
+            description = description.toPlainText(),
+            tags = tags.toPlainText(),
+            profileImage = profileImage,
+            coverImage = coverImage
         )
     }
 
-    // --------------------------------------------------
-    // DELETE CLUB
-    // --------------------------------------------------
-    suspend fun deleteClub(id: String): Result<Map<String, String>> = runCatching {
-        api.deleteClub(id)
-    }
-
-    // --------------------------------------------------
-    // ASSIGN PRESIDENT TO A CLUB
-    // --------------------------------------------------
-    suspend fun assignPresident(
+    suspend fun updateProfileImage(
         clubId: String,
-        userId: String
-    ): Result<Club> = runCatching {
-        api.assignPresident(clubId, userId)
+        profileImage: MultipartBody.Part
+    ): UiState<ClubHomeDto> = safeCall {
+        api.updateClubProfile(
+            id = clubId,
+            name = null,
+            description = null,
+            tags = null,
+            profileImage = profileImage,
+            coverImage = null
+        )
     }
 
-    // --------------------------------------------------
-    // ADD MEMBER
-    // --------------------------------------------------
-    suspend fun addMember(
+    suspend fun updateCoverImage(
         clubId: String,
-        userId: String
-    ): Result<Club> = runCatching {
-        api.addMemberToClub(clubId, userId)
+        coverImage: MultipartBody.Part
+    ): UiState<ClubHomeDto> = safeCall {
+        api.updateClubProfile(
+            id = clubId,
+            name = null,
+            description = null,
+            tags = null,
+            profileImage = null,
+            coverImage = coverImage
+        )
     }
 
-    // --------------------------------------------------
-    // REMOVE MEMBER
-    // --------------------------------------------------
-    suspend fun removeMember(
+    suspend fun toggleJoinEnabled(clubId: String): UiState<ClubHomeDto> = safeCall {
+        api.toggleJoinEnabled(clubId)
+    }
+
+    private fun String?.toPlainText(): RequestBody? =
+        this?.takeIf { it.isNotBlank() }?.toRequestBody("text/plain".toMediaTypeOrNull())
+
+    suspend fun updateSettings(
         clubId: String,
-        userId: String
-    ): Result<Club> = runCatching {
-        api.removeMemberFromClub(clubId, userId)
+        joinEnabled: Boolean? = null,
+        joinFormQuestions: List<String>? = null
+    ): UiState<ClubHomeDto> = safeCall {
+        val body = mutableMapOf<String, Any>()
+        if (joinEnabled != null) body["joinEnabled"] = joinEnabled
+        if (joinFormQuestions != null) body["joinFormQuestions"] = joinFormQuestions
+        api.updateClubSettings(clubId, body)
     }
 
-    // --------------------------------------------------
-    // GET CLUB MEMBERS
-    // --------------------------------------------------
-    suspend fun getMembers(
-        clubId: String
-    ): Result<List<User>> = runCatching {
-        api.getClubMembers(clubId)
+    suspend fun getPendingRequests(clubId: String): UiState<List<com.example.esprit.model.club.JoinRequestDto>> = safeCall {
+        api.getPendingRequests(clubId)
+    }
+
+    suspend fun approveRequest(requestId: String): UiState<Unit> = safeCall {
+        api.approveJoinRequest(requestId)
+        Unit
+    }
+
+    suspend fun rejectRequest(requestId: String): UiState<Unit> = safeCall {
+        api.rejectJoinRequest(requestId)
+        Unit
     }
 }
+

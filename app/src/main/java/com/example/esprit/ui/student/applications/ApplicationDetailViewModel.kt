@@ -101,5 +101,23 @@ class ApplicationDetailViewModel @Inject constructor(
             }
         }
     }
+
+    fun updateApplicationStatus(applicationId: String, status: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true) // Show loading state briefly
+            when (val res = repository.updateApplicationStatus(applicationId, status = status)) {
+                is Resource.Success -> {
+                    loadApplication(applicationId) // Reload to refresh UI
+                }
+                is Resource.Error -> {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = res.message ?: "Erreur lors de la mise à jour du statut"
+                    )
+                }
+                else -> {}
+            }
+        }
+    }
 }
 

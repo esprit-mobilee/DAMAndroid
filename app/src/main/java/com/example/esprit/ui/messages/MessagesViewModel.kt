@@ -30,23 +30,24 @@ class MessagesViewModel @Inject constructor(
             try {
                 _isLoading.value = true
                 val user = userRepository.getMe()
-                android.util.Log.d("MessagesViewModel", "loadConversations: user=${user.id} role=${user.role} name=${user.name}")
+                val userId = user.id ?: throw Exception("User ID is null") // Safe unwrap
+                
+                android.util.Log.d("MessagesViewModel", "loadConversations: user=${userId} role=${user.role} name=${user.name}")
                 
                 // 1. Fetch Private Chats
-                val chatResult = chatRepository.getConversations(user.id)
+                val chatResult = chatRepository.getConversations(userId)
                 if (chatResult.isFailure) {
                     android.util.Log.e("MessagesViewModel", "Failed to fetch private chats: ${chatResult.exceptionOrNull()}")
                 }
                 val privateChats = chatResult.getOrElse { emptyList() }
 
                 // 2. Fetch Group Chats (Logic differs by Role)
-                // Flexible check for role (CLUB, Club, club...)
                 val isClub = user.role.equals("CLUB", ignoreCase = true)
                 
                 val clubChats = if (isClub) {
                      // Get the actual Club ID (not User ID)
-                     val clubId = user.presidentOf ?: user.club ?: user.id
-                     android.util.Log.d("MessagesViewModel", "User is CLUB. AccountId=${user.id}, ClubId=$clubId")
+                     val clubId = user.presidentOf ?: user.club ?: userId
+                     android.util.Log.d("MessagesViewModel", "User is CLUB. AccountId=${userId}, ClubId=$clubId")
 
                      // If I am a CLUB, fetch MY OWN group chat status
                      val historyResult = chatRepository.getHistory(clubId, limit = 1)
@@ -92,10 +93,11 @@ class MessagesViewModel @Inject constructor(
                     android.util.Log.d("MessagesViewModel", "User is STUDENT. Fetching joined clubs.")
                     // If I am a STUDENT, fetch clubs I have joined
                     val clubResult = studentRepository.getAllClubs()
-                    val joinedClubs = if (clubResult is com.example.esprit.util.UiState.Success) {
-                        clubResult.data?.filter { 
+                    val joinedClubs = if (clubResult is com.example.esprit.util.UiState.Success<*>) {
+                        val data = clubResult.data as? List<com.example.esprit.model.club.ClubHomeDto> ?: emptyList()
+                        data.filter { 
                             it.membershipStatus == "MEMBER" || it.membershipStatus == "PRESIDENT" 
-                        } ?: emptyList()
+                        }
                     } else {
                         emptyList()
                     }

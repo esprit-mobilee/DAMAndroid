@@ -31,22 +31,23 @@ class NotificationsViewModel @Inject constructor(
         viewModelScope.launch {
             // Get club ID from club repository
             val clubRes = clubRepo.home()
-            if (clubRes !is UiState.Success || clubRes.data == null) {
+            if (clubRes !is UiState.Success<*> || clubRes.data == null) {
                 _uiState.value = NotificationsUiState(error = "Club non trouvé")
                 return@launch
             }
             
-            val clubId = clubRes.data.id
+            val clubId = (clubRes.data as? com.example.esprit.model.club.ClubHomeDto)?.id ?: return@launch
 
             // Load notifications
             when (val res = repo.getClubNotifications(clubId)) {
-                is UiState.Success -> {
+                is UiState.Success<*> -> {
+                    val data = res.data as? List<NotificationDto> ?: emptyList()
                     _uiState.value = _uiState.value.copy(
                         loading = false,
-                        notifications = res.data
+                        notifications = data
                     )
                     // Calculate unread count locally or fetch from API
-                    val unread = res.data.count { !it.read }
+                    val unread = data.count { !it.read }
                     _uiState.value = _uiState.value.copy(unreadCount = unread)
                 }
                 is UiState.Error -> _uiState.value = NotificationsUiState(error = res.message)
@@ -60,7 +61,7 @@ class NotificationsViewModel @Inject constructor(
 
         viewModelScope.launch {
             when (repo.markAsRead(notification.id)) {
-                is UiState.Success -> {
+                is UiState.Success<*> -> {
                     // Update local state
                     val updatedList = _uiState.value.notifications.map {
                         if (it.id == notification.id) it.copy(read = true) else it
@@ -79,7 +80,7 @@ class NotificationsViewModel @Inject constructor(
     fun delete(id: String) {
         viewModelScope.launch {
             when (repo.delete(id)) {
-                is UiState.Success -> {
+                is UiState.Success<*> -> {
                     val updatedList = _uiState.value.notifications.filter { it.id != id }
                     val unread = updatedList.count { !it.read }
                     _uiState.value = _uiState.value.copy(

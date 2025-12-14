@@ -42,14 +42,14 @@ fun EventDetailScreen(
     viewModel: ClubEventsViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
-    
+
     var showJoinDialog by remember { mutableStateOf(false) }
     var showManageDialog by remember { mutableStateOf(false) }
-    
+
     LaunchedEffect(Unit) {
         viewModel.load()
     }
-    
+
     val event = state.events.find { it.id == eventId }
 
     Scaffold(
@@ -94,7 +94,7 @@ fun EventDetailScreen(
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold
                 )
-                
+
                 event.imageUrl?.let { imageUrl ->
                     val fullImageUrl = if (imageUrl.startsWith("http")) {
                         imageUrl
@@ -102,7 +102,7 @@ fun EventDetailScreen(
                         val baseUrl = Constants.BASE_URL.replace("/api/", "")
                         "$baseUrl$imageUrl"
                     }
-                    
+
                     Image(
                         painter = rememberAsyncImagePainter(fullImageUrl),
                         contentDescription = null,
@@ -113,7 +113,7 @@ fun EventDetailScreen(
                         contentScale = ContentScale.Crop
                     )
                 }
-                
+
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -133,20 +133,20 @@ fun EventDetailScreen(
                         }
                     }
                 }
-                
+
                 // Location Section
                 Text(
                     text = "Lieu",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
-                
+
                 LocationMapViewer(
                     location = event.location,
                     modifier = Modifier.fillMaxWidth(),
                     height = 300.dp
                 )
-                
+
                 if (event.registrations.isNotEmpty()) {
                     Text(
                         text = "${event.registrations.size} Inscription(s)",
@@ -195,13 +195,13 @@ fun EventDetailScreen(
             onJoin = { answers ->
                 val body = mutableMapOf<String, Any?>()
                 if (answers.isNotEmpty()) {
-                   body["answers"] = answers
+                    body["answers"] = answers
                 }
                 viewModel.viewModelScope.launch {
                     val res = viewModel.joinEvent(event.id, body)
                     if (res is com.example.esprit.util.UiState.Success) {
-                         viewModel.load() // Reload to update count
-                         showJoinDialog = false
+                        viewModel.load() // Reload to update count
+                        showJoinDialog = false
                     }
                 }
             }
@@ -242,73 +242,73 @@ fun ManageRegistrationsDialog(
         modifier = Modifier.fillMaxWidth(0.95f),
         title = { Text("Gérer les inscriptions") },
         text = {
-             if (loading) {
-                 Box(Modifier.fillMaxWidth(), contentAlignment = androidx.compose.ui.Alignment.Center) {
-                     CircularProgressIndicator()
-                 }
-             } else if (registrations.isEmpty()) {
-                 Text("Aucune inscription pour le moment.")
-             } else {
-                 androidx.compose.foundation.lazy.LazyColumn(
-                     verticalArrangement = Arrangement.spacedBy(8.dp)
-                 ) {
-                     items(registrations.size) { index ->
-                         val reg = registrations[index]
-                         Card(
-                             colors = CardDefaults.cardColors(
-                                 containerColor = if (reg.status == "accepted") Color(0xFFE8F5E9)
-                                 else if (reg.status == "rejected") Color(0xFFFFEBEE)
-                                 else MaterialTheme.colorScheme.surface
-                             ),
-                             border = BorderStroke(1.dp, Color.LightGray)
-                         ) {
-                             Column(Modifier.padding(12.dp)) {
-                                 Row(
-                                     Modifier.fillMaxWidth(),
-                                     horizontalArrangement = Arrangement.SpaceBetween
-                                 ) {
-                                     Text(reg.name ?: "Inconnu", fontWeight = FontWeight.Bold)
-                                     Text(reg.status ?: "pending", style = MaterialTheme.typography.labelSmall)
-                                 }
-                                 reg.email?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
-                                 
-                                 if (!reg.answers.isNullOrEmpty()) {
-                                     Spacer(Modifier.height(4.dp))
-                                     Text("Réponses :", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                                     reg.answers.forEach { ans ->
-                                         Text("- ${ans.question}: ${ans.answer}", style = MaterialTheme.typography.bodySmall)
-                                     }
-                                 }
+            if (loading) {
+                Box(Modifier.fillMaxWidth(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else if (registrations.isEmpty()) {
+                Text("Aucune inscription pour le moment.")
+            } else {
+                androidx.compose.foundation.lazy.LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(registrations.size) { index ->
+                        val reg = registrations[index]
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (reg.status == "accepted") Color(0xFFE8F5E9)
+                                else if (reg.status == "rejected") Color(0xFFFFEBEE)
+                                else MaterialTheme.colorScheme.surface
+                            ),
+                            border = BorderStroke(1.dp, Color.LightGray)
+                        ) {
+                            Column(Modifier.padding(12.dp)) {
+                                Row(
+                                    Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(reg.name ?: "Inconnu", fontWeight = FontWeight.Bold)
+                                    Text(reg.status ?: "pending", style = MaterialTheme.typography.labelSmall)
+                                }
+                                reg.email?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
 
-                                 if (reg.status == "pending") {
-                                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                                         TextButton(
-                                             onClick = {
-                                                 viewModel.viewModelScope.launch {
-                                                     viewModel.rejectRegistration(eventId, reg.userId ?: "")
-                                                     // Refresh
-                                                      val res = viewModel.getRegistrations(eventId)
-                                                      if (res is com.example.esprit.util.UiState.Success) registrations = res.data
-                                                 }
-                                             }
-                                         ) { Text("Refuser", color = Color.Red) }
-                                         TextButton(
-                                             onClick = {
-                                                  viewModel.viewModelScope.launch {
-                                                     viewModel.approveRegistration(eventId, reg.userId ?: "")
-                                                     // Refresh
-                                                      val res = viewModel.getRegistrations(eventId)
-                                                      if (res is com.example.esprit.util.UiState.Success) registrations = res.data
-                                                 }
-                                             }
-                                         ) { Text("Accepter", color = Color(0xFF2E7D32)) }
-                                     }
-                                 }
-                             }
-                         }
-                     }
-                 }
-             }
+                                if (!reg.answers.isNullOrEmpty()) {
+                                    Spacer(Modifier.height(4.dp))
+                                    Text("Réponses :", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                    reg.answers.forEach { ans ->
+                                        Text("- ${ans.question}: ${ans.answer}", style = MaterialTheme.typography.bodySmall)
+                                    }
+                                }
+
+                                if (reg.status == "pending") {
+                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                                        TextButton(
+                                            onClick = {
+                                                viewModel.viewModelScope.launch {
+                                                    viewModel.rejectRegistration(eventId, reg.userId ?: "")
+                                                    // Refresh
+                                                    val res = viewModel.getRegistrations(eventId)
+                                                    if (res is com.example.esprit.util.UiState.Success) registrations = res.data
+                                                }
+                                            }
+                                        ) { Text("Refuser", color = Color.Red) }
+                                        TextButton(
+                                            onClick = {
+                                                viewModel.viewModelScope.launch {
+                                                    viewModel.approveRegistration(eventId, reg.userId ?: "")
+                                                    // Refresh
+                                                    val res = viewModel.getRegistrations(eventId)
+                                                    if (res is com.example.esprit.util.UiState.Success) registrations = res.data
+                                                }
+                                            }
+                                        ) { Text("Accepter", color = Color(0xFF2E7D32)) }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         },
         confirmButton = {
             TextButton(onClick = onDismiss) { Text("Fermer") }
@@ -334,9 +334,3 @@ private fun InfoRow(label: String, value: String) {
         )
     }
 }
-
-
-
-
-
-

@@ -124,6 +124,11 @@ dependencies {
     // PDFBox-Android
     implementation(libs.pdfbox.android)
 
+    // Socket.IO
+    implementation("io.socket:socket.io-client:2.1.0") {
+        exclude(group = "org.json", module = "json")
+    }
+
 }
 
 // enforce JavaPoet version in this module too

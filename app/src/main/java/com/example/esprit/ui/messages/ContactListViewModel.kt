@@ -36,10 +36,10 @@ class ContactListViewModel @Inject constructor(
                 _currentUserId.value = me.id
 
                 val allClubs = apiService.getAllClubs()
-                val myClubs = allClubs.filter { 
-                    it.membershipStatus == "MEMBER" || it.membershipStatus == "PRESIDENT" 
+                val myClubs = allClubs.filter {
+                    it.membershipStatus == "MEMBER" || it.membershipStatus == "PRESIDENT"
                 }
-                
+
                 val memberMap = mutableMapOf<String, User>()
 
                 myClubs.forEach { club ->
@@ -52,7 +52,7 @@ class ContactListViewModel @Inject constructor(
                             emptyList()
                         }
                     }
-                    
+
                     members?.forEach { memberDto ->
                         if (memberDto.id != me.id && !memberMap.containsKey(memberDto.id)) {
                             // Split name into first/last
@@ -73,7 +73,7 @@ class ContactListViewModel @Inject constructor(
                         }
                     }
                 }
-                
+
                 _contacts.value = memberMap.values.sortedBy { it.name }
 
             } catch (e: Exception) {

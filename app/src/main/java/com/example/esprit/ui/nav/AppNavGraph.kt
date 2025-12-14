@@ -42,13 +42,29 @@ import com.example.esprit.ui.student.applications.StudentApplicationsScreen
 import com.example.esprit.ui.student.applications.StudentApplicationDetailScreen
 import com.example.esprit.ui.student.applications.StudentApplicationEditScreen
 import com.example.esprit.ui.teacher.TeacherHomeScreen
-import com.example.esprit.ui.vieetudiante.*
 import com.example.esprit.ui.admin.applications.AdminApplicationsListScreen
 import com.example.esprit.ui.admin.applications.AdminApplicationDetailScreen
 import com.example.esprit.ui.admin.applications.ScheduleInterviewScreen
 import com.example.esprit.ui.student.ai.AIChatScreen
 import com.example.esprit.ui.student.ai.ChatHistoryScreen
 import com.example.esprit.service.ChatHistoryManager
+import com.example.esprit.ui.auth.SessionViewModel
+import com.example.esprit.ui.messages.ContactListScreen
+import com.example.esprit.ui.chat.ChatScreen
+import com.example.esprit.ui.chat.ChatViewModel
+import com.example.esprit.ui.club.ClubEventsViewModel
+import com.example.esprit.ui.club.ClubHomeViewModel
+import com.example.esprit.ui.club.ClubPostsViewModel
+import com.example.esprit.ui.club.screens.ClubEventsScreen
+import com.example.esprit.ui.club.screens.ClubHomeScreen
+import com.example.esprit.ui.club.screens.ClubPostsScreen
+import com.example.esprit.ui.club.screens.ClubSettingsScreen
+import com.example.esprit.ui.club.screens.CreateClubEventScreen
+import com.example.esprit.ui.club.screens.CreateClubPostScreen
+import com.example.esprit.ui.club.screens.EditClubEventScreen
+import com.example.esprit.ui.club.screens.EventDetailScreen
+import com.example.esprit.ui.club.screens.MembersListScreen
+import com.example.esprit.ui.club.screens.NotificationsScreen
 
 @EntryPoint
 @InstallIn(SingletonComponent::class)
@@ -96,6 +112,7 @@ fun AppNavGraph(
             Role.PARENT -> Destinations.PARENT_HOME
             Role.ADMIN -> Destinations.ADMIN_HOME
             Role.PRESIDENT -> Destinations.STUDENT_HOME
+            Role.CLUB -> Destinations.CLUB_HOME
         }
     
     NavHost(
@@ -118,9 +135,6 @@ fun AppNavGraph(
             )
         }
 
-        // ----------------------------------------------------------
-        // LOGIN
-        // ----------------------------------------------------------
         // ----------------------------------------------------------
         // LOGIN
         // ----------------------------------------------------------
@@ -149,9 +163,13 @@ fun AppNavGraph(
                 onNavigateAbsences = { navController.navigate(Destinations.ABSENCES) },
                 onNavigateAnnouncements = { navController.navigate(Destinations.ANNOUNCEMENTS) },
                 onNavigateProfile = { navController.navigate(Destinations.PROFILE) },
-                onNavigateVieEtudiante = { navController.navigate(Destinations.VIE_ETUDIANTE) },
+                onNavigateClubs = { navController.navigate(Destinations.STUDENT_CLUBS) },
+                onNavigateMessages = { navController.navigate(Destinations.MESSAGES) },
                 onNavigateStages = { navController.navigate(Destinations.STUDENT_INTERNSHIP_LIST) },
                 onNavigateAIChat = { navController.navigate(Destinations.AI_CHAT) },
+                onNavigateClubChat = { clubId ->
+                    navController.navigate(Destinations.clubChatRoute(clubId, "Chat"))
+                },
                 onLogout = { handleLogout() }
             )
         }
@@ -182,7 +200,6 @@ fun AppNavGraph(
         composable(Destinations.ADMIN_HOME) {
             AdminHomeScreen(
                 onNavigateProfile = { navController.navigate(Destinations.PROFILE) },
-                onNavigateVieEtudiante = { navController.navigate(Destinations.VIE_ETUDIANTE) },
                 onNavigateStages = {
                     navController.navigate(Destinations.ADMIN_INTERNSHIP_LIST)
                 },
@@ -213,113 +230,212 @@ fun AppNavGraph(
             )
         }
 
-        // ----------------------------------------------------------
-        // VIE ÉTUDIANTE
-        // ----------------------------------------------------------
-        composable(Destinations.VIE_ETUDIANTE) {
-            val eventsVm: EventsViewModel = hiltViewModel()
-            val clubsVm: ClubsViewModel = hiltViewModel()
-
-            LaunchedEffect(Unit) {
-                eventsVm.loadEvents()
-                clubsVm.loadClubs()
+// CLUB
+        composable(Destinations.CLUB_HOME) { backStackEntry ->
+            val sessionViewModel: SessionViewModel = hiltViewModel(backStackEntry)
+            val parentEntry = remember(backStackEntry) {
+                navController.getBackStackEntry(Destinations.CLUB_HOME)
             }
-
-            VieEtudianteScreen(
-                eventsViewModel = eventsVm,
-                clubsViewModel = clubsVm,
-                onAddEvent = { navController.navigate(Destinations.EVENT_FORM) },
-                onAddClub = { navController.navigate(Destinations.CLUB_FORM) },
-                onEventClick = { id ->
-                    navController.navigate("${Destinations.EVENT_DETAILS}/$id")
+            val eventsViewModel: ClubEventsViewModel = hiltViewModel(parentEntry)
+            val refreshEvents = backStackEntry
+                .savedStateHandle
+                .getStateFlow("refreshEvents", false)
+                .collectAsState()
+            LaunchedEffect(refreshEvents.value) {
+                if (refreshEvents.value) {
+                    eventsViewModel.load()
+                    backStackEntry.savedStateHandle["refreshEvents"] = false
+                }
+            }
+            ClubHomeScreen(
+                onCreateEvent = { navController.navigate(Destinations.CLUB_EVENT_CREATE) },
+                onCreatePost = { clubId ->
+                    if (clubId.isNotBlank()) {
+                        navController.navigate(Destinations.clubPostCreateRoute(clubId))
+                    }
                 },
-                onClubClick = { id ->
-                    navController.navigate("${Destinations.CLUB_DETAILS}/$id")
+                onEditPost = { postId ->
+                    navController.navigate(Destinations.clubPostEditRoute(postId))
                 },
-                onEditEvent = { id ->
-                    navController.navigate("${Destinations.EVENT_FORM}?eventId=$id")
+                onNavigatePosts = { navController.navigate(Destinations.CLUB_POSTS) },
+                onNavigateMembers = { navController.navigate(Destinations.CLUB_MEMBERS) },
+                onNavigateSettings = { navController.navigate(Destinations.CLUB_SETTINGS) },
+                onNavigateMessages = { navController.navigate(Destinations.MESSAGES) },
+                onNavigateNotifications = { navController.navigate(Destinations.CLUB_NOTIFICATIONS) },
+                onNavigateRequests = { navController.navigate(Destinations.CLUB_REQUESTS) },
+                onLogout = {
+                    sessionViewModel.logout {
+                        navController.navigate(Destinations.LOGIN) { popUpTo(0) }
+                    }
                 },
-                onEditClub = { id ->
-                    navController.navigate("${Destinations.CLUB_FORM}?clubId=$id")
+                onEventClick = { eventId ->
+                    navController.navigate(Destinations.clubEventDetailRoute(eventId))
                 },
-                onDeleteEvent = { id ->
-                    eventsVm.deleteEvent(id) { eventsVm.loadEvents() }
-                },
-                onDeleteClub = { id ->
-                    clubsVm.deleteClub(id) { clubsVm.loadClubs() }
+                onEventEdit = { eventId ->
+                    navController.navigate(Destinations.clubEventEditRoute(eventId))
                 }
             )
         }
-
-        // ----------------------------------------------------------
-        // EVENT FORM
-        // ----------------------------------------------------------
-        composable(
-            route = Destinations.EVENT_FORM + "?eventId={eventId}",
-            arguments = listOf(
-                navArgument("eventId") {
-                    type = NavType.StringType
-                    nullable = true
-                    defaultValue = null
+        composable(Destinations.CLUB_NOTIFICATIONS) {
+            NotificationsScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable(Destinations.CLUB_REQUESTS) {
+            com.example.esprit.ui.club.screens.ClubRequestsScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable(Destinations.CLUB_EVENTS) { backStackEntry ->
+            val viewModel: ClubEventsViewModel = hiltViewModel(backStackEntry)
+            val refreshEvents = backStackEntry
+                .savedStateHandle
+                .getStateFlow("refreshEvents", false)
+                .collectAsState()
+            LaunchedEffect(refreshEvents.value) {
+                if (refreshEvents.value) {
+                    viewModel.load()
+                    backStackEntry.savedStateHandle["refreshEvents"] = false
+                }
+            }
+            ClubEventsScreen(
+                onCreateEvent = { navController.navigate(Destinations.CLUB_EVENT_CREATE) },
+                onOpenEvent = { eventId ->
+                    navController.navigate(Destinations.clubEventDetailRoute(eventId))
+                },
+                viewModel = viewModel
+            )
+        }
+        composable(Destinations.CLUB_EVENT_CREATE) {
+            CreateClubEventScreen(
+                onBack = { navController.popBackStack() },
+                onCreated = {
+                    navController.getBackStackEntry(Destinations.CLUB_HOME)
+                        .savedStateHandle["refreshEvents"] = true
+                    navController.popBackStack()
                 }
             )
+        }
+        composable(
+            route = Destinations.CLUB_EVENT_DETAIL,
+            arguments = listOf(navArgument("eventId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val eventsVm: EventsViewModel = hiltViewModel()
-            val eventId = backStackEntry.arguments?.getString("eventId")
-
-            EventFormScreen(
-                eventsViewModel = eventsVm,
+            val eventId = backStackEntry.arguments?.getString("eventId").orEmpty()
+            EventDetailScreen(
                 eventId = eventId,
-                onSaved = { navController.popBackStack() }
-            )
-        }
-
-        // ----------------------------------------------------------
-        // CLUB FORM
-        // ----------------------------------------------------------
-        composable(
-            route = Destinations.CLUB_FORM + "?clubId={clubId}",
-            arguments = listOf(
-                navArgument("clubId") {
-                    type = NavType.StringType
-                    nullable = true
-                    defaultValue = null
+                onBack = { navController.popBackStack() },
+                onEdit = { id ->
+                    navController.navigate(Destinations.clubEventEditRoute(id))
                 }
             )
+        }
+        composable(
+            route = Destinations.CLUB_EVENT_EDIT,
+            arguments = listOf(navArgument("eventId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val clubsVm: ClubsViewModel = hiltViewModel()
-            val clubId = backStackEntry.arguments?.getString("clubId")
-
-            ClubFormScreen(
-                clubsViewModel = clubsVm,
+            val eventId = backStackEntry.arguments?.getString("eventId").orEmpty()
+            EditClubEventScreen(
+                eventId = eventId,
+                onBack = { navController.popBackStack() },
+                onUpdated = {
+                    navController.getBackStackEntry(Destinations.CLUB_HOME)
+                        .savedStateHandle["refreshEvents"] = true
+                    navController.popBackStack()
+                }
+            )
+        }
+        composable(Destinations.CLUB_POSTS) { backStackEntry ->
+            val parentEntry = remember(backStackEntry) {
+                navController.getBackStackEntry(Destinations.CLUB_HOME)
+            }
+            val homeViewModel: ClubHomeViewModel = hiltViewModel(parentEntry)
+            val clubState = homeViewModel.uiState.collectAsState()
+            val postsViewModel: ClubPostsViewModel = hiltViewModel(backStackEntry)
+            val refreshPosts = backStackEntry
+                .savedStateHandle
+                .getStateFlow("refreshPosts", false)
+                .collectAsState()
+            LaunchedEffect(refreshPosts.value) {
+                if (refreshPosts.value) {
+                    postsViewModel.refresh()
+                    backStackEntry.savedStateHandle["refreshPosts"] = false
+                }
+            }
+            ClubPostsScreen(
+                clubId = clubState.value.club?.id.orEmpty(),
+                clubName = clubState.value.club?.name,
+                clubAvatarUrl = clubState.value.club?.imageUrl,
+                onCreatePost = { id ->
+                    if (id.isNotBlank()) {
+                        navController.navigate(Destinations.clubPostCreateRoute(id))
+                    }
+                },
+                onOpenPost = { /* TODO navigate detail */ },
+                viewModel = postsViewModel
+            )
+        }
+        composable(
+            route = Destinations.CLUB_POST_CREATE,
+            arguments = listOf(navArgument("clubId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val clubId = backStackEntry.arguments?.getString("clubId").orEmpty()
+            CreateClubPostScreen(
                 clubId = clubId,
-                onSaved = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onSuccess = {
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("refreshPosts", true)
+                    navController.popBackStack()
+                }
+            )
+        }
+        composable(
+            route = Destinations.CLUB_POST_EDIT,
+            arguments = listOf(navArgument("postId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val postId = backStackEntry.arguments?.getString("postId").orEmpty()
+            val postsViewModel: com.example.esprit.ui.club.ClubPostsViewModel = hiltViewModel()
+            val postsState by postsViewModel.uiState.collectAsState()
+
+            // Find the post from the current state
+            val post = postsState.posts.find { it.id == postId }
+
+            // Debug logging
+            android.util.Log.d("AppNavGraph", "Edit post - postId: $postId")
+            android.util.Log.d("AppNavGraph", "Edit post - found post: ${post != null}")
+            android.util.Log.d("AppNavGraph", "Edit post - content: ${post?.content}")
+            android.util.Log.d("AppNavGraph", "Edit post - imageUrl: ${post?.imageUrl}")
+
+            CreateClubPostScreen(
+                postId = postId,
+                initialContent = post?.content ?: "",
+                initialImageUrl = post?.imageUrl,
+                onBack = { navController.popBackStack() },
+                onSuccess = {
+                    navController.previousBackStackEntry
+                        ?.savedStateHandle
+                        ?.set("refreshPosts", true)
+                    navController.popBackStack()
+                }
+            )
+        }
+        composable(Destinations.CLUB_MEMBERS) { MembersListScreen() }
+        composable(Destinations.CLUB_SETTINGS) { backStackEntry ->
+            val sessionViewModel: SessionViewModel = hiltViewModel(backStackEntry)
+            ClubSettingsScreen(
+                onLogout = {
+                    sessionViewModel.logout {
+                        navController.navigate(Destinations.LOGIN) { popUpTo(0) }
+                    }
+                }
             )
         }
 
-        // ----------------------------------------------------------
-        // EVENT DETAILS
-        // ----------------------------------------------------------
-        composable(
-            route = "${Destinations.EVENT_DETAILS}/{id}",
-            arguments = listOf(navArgument("id") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val id = backStackEntry.arguments?.getString("id") ?: ""
-            val eventsVm: EventsViewModel = hiltViewModel()
-            EventDetailsScreen(eventId = id, eventsViewModel = eventsVm)
-        }
 
-        // ----------------------------------------------------------
-        // CLUB DETAILS
-        // ----------------------------------------------------------
-        composable(
-            route = "${Destinations.CLUB_DETAILS}/{id}",
-            arguments = listOf(navArgument("id") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val id = backStackEntry.arguments?.getString("id") ?: ""
-            val clubsVm: ClubsViewModel = hiltViewModel()
-            ClubDetailsScreen(clubId = id, clubsViewModel = clubsVm)
-        }
+
+
+
 
         // ----------------------------------------------------------
         // ADMIN INTERNSHIPS
@@ -599,5 +715,139 @@ fun AppNavGraph(
                 onDismiss = { navController.popBackStack() }
             )
         }
+
+        // ----------------------------------------------------------
+        // MESSAGING & CHAT
+        // ----------------------------------------------------------
+        composable(Destinations.CONTACT_LIST) {
+             com.example.esprit.ui.messages.ContactListScreen(
+                 navController = navController
+             )
+        }
+
+        composable(
+            route = Destinations.PRIVATE_CHAT,
+            arguments = listOf(
+                navArgument("partnerId") { type = NavType.StringType },
+                navArgument("name") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val partnerId = backStackEntry.arguments?.getString("partnerId")
+            val name = backStackEntry.arguments?.getString("name") 
+            val chatVm: com.example.esprit.ui.chat.ChatViewModel = hiltViewModel()
+            
+            LaunchedEffect(partnerId) {
+                if (partnerId != null) {
+                    chatVm.loadMessages(clubId = null, partnerId = partnerId)
+                }
+            }
+            
+            com.example.esprit.ui.chat.ChatScreen(
+                navController = navController,
+                partnerId = partnerId,
+                initialTitle = name ?: "Chat"
+            )
+        }
+
+        composable(
+            route = Destinations.CLUB_CHAT,
+            arguments = listOf(
+                navArgument("clubId") { type = NavType.StringType },
+                navArgument("name") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val clubId = backStackEntry.arguments?.getString("clubId")
+            val name = backStackEntry.arguments?.getString("name")
+            val chatVm: com.example.esprit.ui.chat.ChatViewModel = hiltViewModel()
+            
+            LaunchedEffect(clubId) {
+                if (clubId != null) {
+                    chatVm.loadMessages(clubId = clubId, partnerId = null)
+                }
+            }
+
+            com.example.esprit.ui.chat.ChatScreen(
+                navController = navController,
+                clubId = clubId,
+                initialTitle = name ?: "Club Chat"
+            )
+        }
+        // STUDENT CLUBS
+        composable(Destinations.STUDENT_CLUBS) {
+            com.example.esprit.ui.student.clubs.StudentClubsScreen(
+                onNavigateClub = { clubId ->
+                    navController.navigate(Destinations.studentClubProfileRoute(clubId))
+                },
+                onNavigateEventDetail = { eventId ->
+                    navController.navigate(Destinations.clubEventDetailRoute(eventId))
+                }
+            )
+        }
+
+        // STUDENT CLUB PROFILE
+        composable(
+            route = Destinations.STUDENT_CLUB_PROFILE,
+            arguments = listOf(navArgument("clubId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val clubId = backStackEntry.arguments?.getString("clubId") ?: return@composable
+            com.example.esprit.ui.student.club.StudentClubProfileScreen(
+                clubId = clubId,
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateChat = { name -> navController.navigate(Destinations.clubChatRoute(clubId, name)) }
+            )
+        }
+
+        // CHAT
+        composable(
+            route = Destinations.CLUB_CHAT,
+            arguments = listOf(
+                navArgument("clubId") { type = NavType.StringType },
+                navArgument("name") { type = NavType.StringType; defaultValue = "Chat" }
+            )
+        ) { backStackEntry ->
+            val clubId = backStackEntry.arguments?.getString("clubId") ?: return@composable
+            val name = backStackEntry.arguments?.getString("name") ?: "Chat"
+            com.example.esprit.ui.chat.ChatScreen(
+                navController = navController,
+                clubId = clubId,
+                initialTitle = name
+            )
+        }
+
+        composable(
+            route = Destinations.PRIVATE_CHAT,
+            arguments = listOf(
+                navArgument("partnerId") { type = NavType.StringType },
+                navArgument("name") { type = NavType.StringType; defaultValue = "Chat" }
+            )
+        ) { backStackEntry ->
+            val partnerId = backStackEntry.arguments?.getString("partnerId") ?: return@composable
+            val name = backStackEntry.arguments?.getString("name") ?: "Chat"
+            com.example.esprit.ui.chat.ChatScreen(
+                navController = navController,
+                clubId = null,
+                partnerId = partnerId,
+                initialTitle = name
+            )
+        }
+
+        composable(route = Destinations.CONTACT_LIST) {
+            com.example.esprit.ui.messages.ContactListScreen(navController = navController)
+        }
+
+        composable(Destinations.MESSAGES) {
+            val viewModel: com.example.esprit.ui.messages.MessagesViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+            com.example.esprit.ui.messages.MessagesScreen(navController = navController, viewModel = viewModel)
+        }
+
+
     }
+
+
 }
+
+
+
+
+
+

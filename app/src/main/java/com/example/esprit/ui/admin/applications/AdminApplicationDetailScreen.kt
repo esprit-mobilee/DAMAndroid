@@ -251,10 +251,10 @@ fun AdminApplicationDetailScreen(
                                 }
                             },
                             onAccept = {
-                                adminViewModel.updateApplicationStatus(applicationId, "accepted")
+                                viewModel.updateApplicationStatus(applicationId, "accepted")
                             },
                             onReject = {
-                                adminViewModel.updateApplicationStatus(applicationId, "rejected")
+                                viewModel.updateApplicationStatus(applicationId, "rejected")
                             }
                         )
                     }

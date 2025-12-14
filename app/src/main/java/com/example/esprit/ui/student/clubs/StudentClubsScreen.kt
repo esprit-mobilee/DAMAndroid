@@ -38,7 +38,7 @@ fun StudentClubsScreen(
     val clubsState by clubsViewModel.uiState.collectAsState()
     val feedState by feedViewModel.uiState.collectAsState()
     val eventsState by eventsViewModel.uiState.collectAsState()
-    
+
     var showRegistrationDialog by remember { mutableStateOf(false) }
     var selectedEventId by remember { mutableStateOf<String?>(null) }
 
@@ -186,7 +186,7 @@ fun StudentClubsScreen(
             }
         }
     }
-    
+
     // Event Registration Dialog
     if (showRegistrationDialog && selectedEventId != null) {
         val event = eventsState.events.find { it.id == selectedEventId }
@@ -302,7 +302,7 @@ fun ClubListItem(
                     val baseUrl = Constants.BASE_URL.replace("/api/", "")
                     "$baseUrl${club.imageUrl}"
                 }
-                
+
                 Image(
                     painter = rememberAsyncImagePainter(fullUrl),
                     contentDescription = null,

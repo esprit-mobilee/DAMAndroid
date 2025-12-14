@@ -30,9 +30,10 @@ class ClubSettingsViewModel @Inject constructor(
     fun load() {
         viewModelScope.launch {
             when (val res = repo.home()) {
-                is UiState.Success -> {
-                    clubId = res.data.id
-                    _uiState.value = ClubSettingsUiState(club = res.data)
+                is UiState.Success<*> -> {
+                    val data = res.data as? ClubHomeDto
+                    clubId = data?.id
+                    _uiState.value = ClubSettingsUiState(club = data)
                 }
                 is UiState.Error -> _uiState.value = ClubSettingsUiState(error = res.message)
                 UiState.Loading -> _uiState.value = ClubSettingsUiState(loading = true)
@@ -59,10 +60,13 @@ class ClubSettingsViewModel @Inject constructor(
                     coverImage
                 )
             ) {
-                is UiState.Success -> _uiState.value = ClubSettingsUiState(
-                    club = res.data,
-                    message = "Profil mis a jour"
-                )
+                is UiState.Success<*> -> {
+                    val data = res.data as? ClubHomeDto
+                    _uiState.value = ClubSettingsUiState(
+                        club = data,
+                        message = "Profil mis à jour"
+                    )
+                }
                 is UiState.Error -> _uiState.value = _uiState.value.copy(error = res.message)
                 UiState.Loading -> _uiState.value = _uiState.value.copy(loading = true)
             }
@@ -72,10 +76,13 @@ class ClubSettingsViewModel @Inject constructor(
         val id = clubId ?: return
         viewModelScope.launch {
             when (val res = repo.toggleJoinEnabled(id)) {
-                is UiState.Success -> _uiState.value = _uiState.value.copy(
-                    club = res.data,
-                    message = if (res.data.joinEnabled) "Inscriptions ouvertes" else "Inscriptions fermées"
-                )
+                is UiState.Success<*> -> {
+                    val data = res.data as? ClubHomeDto
+                    _uiState.value = _uiState.value.copy(
+                        club = data,
+                        message = if (data?.joinEnabled == true) "Inscriptions ouvertes" else "Inscriptions fermées"
+                    )
+                }
                 is UiState.Error -> _uiState.value = _uiState.value.copy(error = res.message)
                 UiState.Loading -> _uiState.value = _uiState.value.copy(loading = true)
             }
@@ -86,10 +93,13 @@ class ClubSettingsViewModel @Inject constructor(
         val id = clubId ?: return
         viewModelScope.launch {
             when (val res = repo.updateSettings(id, joinFormQuestions = questions)) {
-                is UiState.Success -> _uiState.value = _uiState.value.copy(
-                    club = res.data,
-                    message = "Questions mises à jour"
-                )
+                is UiState.Success<*> -> {
+                    val data = res.data as? ClubHomeDto
+                    _uiState.value = _uiState.value.copy(
+                        club = data,
+                        message = "Questions mises à jour"
+                    )
+                }
                 is UiState.Error -> _uiState.value = _uiState.value.copy(error = res.message)
                 UiState.Loading -> _uiState.value = _uiState.value.copy(loading = true)
             }

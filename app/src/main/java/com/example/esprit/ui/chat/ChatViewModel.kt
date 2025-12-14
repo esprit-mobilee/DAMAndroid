@@ -112,7 +112,7 @@ class ChatViewModel @Inject constructor(
             try {
                 val user = apiService.getMe()
                 _currentUser.value = user
-                chatRepository.connect(user.id) 
+                user.id?.let { chatRepository.connect(it) } // API User ID should not be null in practice, but model is nullable
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -120,12 +120,10 @@ class ChatViewModel @Inject constructor(
     }
 
     fun loadMessages(clubId: String?, partnerId: String?) {
-        android.util.Log.d("ChatViewModel", "loadMessages: clubId=$clubId, partnerId=$partnerId")
-        android.util.Log.d("ChatViewModel", "Current state: currentClubId=$currentClubId, currentPartnerId=$currentPartnerId")
+        // ... (logging)
         
         // Check if switching to a different chat BEFORE updating current IDs
         val isSwitchingChat = (clubId != currentClubId) || (partnerId != currentPartnerId)
-        android.util.Log.d("ChatViewModel", "isSwitchingChat=$isSwitchingChat")
         
         // Update current IDs AFTER checking
         this.currentClubId = clubId
@@ -137,11 +135,8 @@ class ChatViewModel @Inject constructor(
             
             // Only clear messages when switching to a different chat
             if (isSwitchingChat) {
-                android.util.Log.d("ChatViewModel", "Clearing messages (switching chat)")
                 _messages.value = emptyList()
                 _clubMembers.value = emptyList()
-            } else {
-                android.util.Log.d("ChatViewModel", "Keeping existing messages (same chat)")
             }
             
             try {
@@ -152,27 +147,22 @@ class ChatViewModel @Inject constructor(
                     chatRepository.getHistory(clubId)
                 } else if (partnerId != null) {
                     val user = _currentUser.value ?: apiService.getMe().also { _currentUser.value = it }
-                    chatRepository.getPrivateHistory(user.id, partnerId)
+                    val userId = user.id ?: throw Exception("User ID is null")
+                    chatRepository.getPrivateHistory(userId, partnerId)
                 } else {
                     Result.success(emptyList())
                 }
                 
                 if (result.isSuccess) {
                     val msgs = result.getOrDefault(emptyList())
-                    android.util.Log.d("ChatViewModel", "loadMessages success: ${msgs.size} messages")
-                    if (msgs.isNotEmpty()) {
-                        android.util.Log.d("ChatViewModel", "First message: ${msgs[0].content}")
-                    }
                     _messages.value = msgs.sortedBy { it.createdAt }
                     _loadError.value = null
                 } else {
                     val error = result.exceptionOrNull()
-                    android.util.Log.e("ChatViewModel", "Error fetching messages", error)
                     _loadError.value = error?.message ?: "Failed to load messages"
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                android.util.Log.e("ChatViewModel", "loadMessages exception", e)
                 _loadError.value = e.message ?: "An error occurred while loading messages"
             } finally {
                 _isLoading.value = false
@@ -182,13 +172,15 @@ class ChatViewModel @Inject constructor(
     
     private suspend fun loadClubMembers(clubId: String) {
         try {
-            android.util.Log.d("ChatViewModel", "loadClubMembers for clubId: $clubId")
-            val members = apiService.getClubMembers(clubId)
-            android.util.Log.d("ChatViewModel", "loadClubMembers success: ${members.size} members")
+            // Note: apiService.getClubMembers returns List<ClubMemberDto> now (updated in ApiService)
+            // Or does it return List<User>? 
+            // In ApiService, `getClubMembers(clubId)` returns `List<ClubMemberDto>`.
+            // BUT `getClubMembersDto(clubId)` was added.
+            // Let's assume getClubMembers returns List<ClubMemberDto> as per Step 187 snippet.
+            val members = apiService.getClubMembersDto(clubId)
             _clubMembers.value = members
         } catch (e: Exception) {
             e.printStackTrace()
-            android.util.Log.e("ChatViewModel", "loadClubMembers error", e)
             _clubMembers.value = emptyList()
         }
     }
@@ -196,11 +188,10 @@ class ChatViewModel @Inject constructor(
     @RequiresApi(Build.VERSION_CODES.O)
     fun sendMessage(content: String, type: String = "TEXT", replyTo: MessageDto? = null) {
         val user = _currentUser.value ?: return
+        val userId = user.id ?: return // Safe return if no ID
         
         // Sanitize content
         val sanitizedContent = com.example.esprit.util.BadWordFilter.sanitize(content)
-        
-        android.util.Log.d("ChatViewModel", "sendMessage: type=$type, content=$sanitizedContent (original: $content)")
         
         // Optimistic UI Update
         val tempId = "temp_${System.currentTimeMillis()}"
@@ -209,10 +200,10 @@ class ChatViewModel @Inject constructor(
             clubId = currentClubId,
             recipientId = currentPartnerId,
             senderId = com.example.esprit.model.chat.ChatUserDto(
-                id = user.id,
+                id = userId,
                 firstName = user.firstName ?: "",
                 lastName = user.lastName ?: "",
-                imageUrl = null // User model missing image field
+                imageUrl = null
             ),
             content = sanitizedContent,
             type = type,
@@ -234,7 +225,7 @@ class ChatViewModel @Inject constructor(
         
         chatRepository.sendMessage(
             clubId = currentClubId,
-            senderId = user.id,
+            senderId = userId,
             content = sanitizedContent,
             type = type,
             recipientId = currentPartnerId,
@@ -244,11 +235,10 @@ class ChatViewModel @Inject constructor(
 
     @RequiresApi(Build.VERSION_CODES.O)
     fun sendVoice(file: File, replyTo: MessageDto?) {
-        android.util.Log.d("ChatViewModel", "sendVoice: file=${file.path}")
         uploadFile(file) { url ->
-            android.util.Log.d("ChatViewModel", "sendVoice uploaded: url=$url")
             if (url != null) {
                 val user = _currentUser.value ?: return@uploadFile
+                val userId = user.id ?: return@uploadFile
                 
                 // Optimistic Update for Voice
                 val tempId = "temp_${System.currentTimeMillis()}"
@@ -257,14 +247,14 @@ class ChatViewModel @Inject constructor(
                     clubId = currentClubId,
                     recipientId = currentPartnerId,
                     senderId = com.example.esprit.model.chat.ChatUserDto(
-                        id = user.id,
+                        id = userId,
                         firstName = user.firstName ?: "",
                         lastName = user.lastName ?: "",
                         imageUrl = null
                     ),
                     content = "Sent a voice message",
                     type = "VOICE",
-                    attachmentUrl = url, // Local file? Use url for now
+                    attachmentUrl = url, 
                     createdAt = java.time.Instant.now().toString(),
 
                     replyTo = replyTo?.let {
@@ -281,7 +271,7 @@ class ChatViewModel @Inject constructor(
                 val safeReplyTo = if (replyTo?.id?.startsWith("temp_") == true) null else replyTo?.id
                 chatRepository.sendMessage(
                     clubId = currentClubId,
-                    senderId = user.id,
+                    senderId = userId,
                     content = "Sent a voice message",
                     type = "VOICE",
                     attachmentUrl = url,
@@ -294,11 +284,10 @@ class ChatViewModel @Inject constructor(
 
     @RequiresApi(Build.VERSION_CODES.O)
     fun sendImage(file: File, replyTo: MessageDto?) {
-        android.util.Log.d("ChatViewModel", "sendImage: file=${file.path}")
         uploadFile(file) { url ->
-            android.util.Log.d("ChatViewModel", "sendImage uploaded: url=$url")
             if (url != null) {
                  val user = _currentUser.value ?: return@uploadFile
+                 val userId = user.id ?: return@uploadFile
                  
                  // Optimistic Update for Image
                  val tempId = "temp_${System.currentTimeMillis()}"
@@ -307,7 +296,7 @@ class ChatViewModel @Inject constructor(
                     clubId = currentClubId,
                     recipientId = currentPartnerId,
                     senderId = com.example.esprit.model.chat.ChatUserDto(
-                        id = user.id,
+                        id = userId,
                         firstName = user.firstName ?: "",
                         lastName = user.lastName ?: "",
                         imageUrl = null
@@ -331,7 +320,7 @@ class ChatViewModel @Inject constructor(
                  val safeReplyTo = if (replyTo?.id?.startsWith("temp_") == true) null else replyTo?.id
                  chatRepository.sendMessage(
                     clubId = currentClubId,
-                    senderId = user.id,
+                    senderId = userId,
                     content = "Sent an image",
                     type = "IMAGE",
                     attachmentUrl = url,
@@ -344,23 +333,25 @@ class ChatViewModel @Inject constructor(
     
     fun editMessage(messageId: String, content: String) {
         val user = _currentUser.value ?: return
-        chatRepository.editMessage(messageId, user.id, content)
+        val userId = user.id ?: return
+        chatRepository.editMessage(messageId, userId, content)
     }
     
     fun deleteMessage(messageId: String) {
-        // If it's a temp message, just remove it locally and don't bother the server (it doesn't have it)
         if (messageId.startsWith("temp_")) {
             _messages.value = _messages.value.filter { it.id != messageId }
             return
         }
         
         val user = _currentUser.value ?: return
-        chatRepository.deleteMessage(messageId, user.id)
+        val userId = user.id ?: return
+        chatRepository.deleteMessage(messageId, userId)
     }
     
     fun addReaction(messageId: String, emoji: String) {
          val user = _currentUser.value ?: return
-         chatRepository.addReaction(messageId, user.id, emoji)
+         val userId = user.id ?: return
+         chatRepository.addReaction(messageId, userId, emoji)
     }
 
     private fun uploadFile(file: File, onResult: (String?) -> Unit) {
@@ -379,10 +370,10 @@ class ChatViewModel @Inject constructor(
 
     fun sendTyping(isTyping: Boolean) {
         val user = _currentUser.value ?: return
+        val userId = user.id ?: return
         if (currentClubId != null) {
-             chatRepository.sendTyping(currentClubId!!, user.id, isTyping)
+             chatRepository.sendTyping(currentClubId!!, userId, isTyping)
         }
-        // Private chat typing not implemented yet in Repo but handled loosely
     }
 
     fun translateMessage(messageId: String, targetLang: String = "fr") {

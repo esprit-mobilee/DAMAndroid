@@ -4,19 +4,29 @@ import android.util.Log
 import com.example.esprit.model.chat.MessageDto
 import com.example.esprit.model.chat.TypingEvent
 import com.example.esprit.util.Constants
+import com.example.esprit.util.DataStoreManager
 import com.google.gson.Gson
 import io.socket.client.IO
 import io.socket.client.Socket
+import io.socket.emitter.Emitter
 import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class SocketManager @Inject constructor(
-    private val dataStoreManager: com.example.esprit.util.DataStoreManager
+    private val tokenManager: DataStoreManager
 ) {
     private var socket: Socket? = null
     private val gson = Gson()
@@ -46,7 +56,7 @@ class SocketManager @Inject constructor(
             opts.transports = arrayOf("websocket", "polling")
             opts.query = "userId=$userId"
             
-            val token = dataStoreManager.getToken()
+            val token = runBlocking { tokenManager.getToken() }
             if (token != null) {
                 opts.auth = mapOf("token" to token)
             }

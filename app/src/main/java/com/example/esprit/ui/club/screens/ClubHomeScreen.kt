@@ -53,7 +53,6 @@ import com.example.esprit.ui.components.LocationDisplay
 import com.example.esprit.ui.theme.RedPrimary
 import com.example.esprit.util.Constants
 import com.example.esprit.util.UiState
-import com.google.android.material.tabs.TabItem
 import kotlinx.coroutines.launch
 
 
@@ -85,11 +84,11 @@ fun ClubHomeScreen(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) { 
+    LaunchedEffect(Unit) {
         viewModel.refresh()
         eventsViewModel.load()
     }
-    
+
     // Load posts when club is loaded
     LaunchedEffect(state.club) {
         state.club?.let { postsViewModel.load(it.id) }
@@ -110,8 +109,8 @@ fun ClubHomeScreen(
                         onNavigateMessages()
                     },
                     onNavigateRequests = {
-                         scope.launch { drawerState.close() }
-                         onNavigateRequests()
+                        scope.launch { drawerState.close() }
+                        onNavigateRequests()
                     },
                     onLogout = {
                         scope.launch { drawerState.close() }
@@ -148,56 +147,56 @@ fun ClubHomeScreen(
                     )
                 )
             },
-        floatingActionButton = {
-            if (selectedTab == 1) { // Only show FAB in Events tab
-                FloatingActionButton(
-                    onClick = onCreateEvent,
-                    containerColor = RedPrimary
-                ) {
-                    Text("+", color = Color.White, fontSize = 24.sp)
+            floatingActionButton = {
+                if (selectedTab == 1) { // Only show FAB in Events tab
+                    FloatingActionButton(
+                        onClick = onCreateEvent,
+                        containerColor = RedPrimary
+                    ) {
+                        Text("+", color = Color.White, fontSize = 24.sp)
+                    }
                 }
             }
-        }
         ) { paddingValues ->
-        when {
-            state.loading -> Box(
-                Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
+            when {
+                state.loading -> Box(
+                    Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+                state.club != null -> ClubHomeContent(
+                    club = state.club!!,
+                    selectedTab = selectedTab,
+                    onTabSelected = { selectedTab = it },
+                    onCreateEvent = onCreateEvent,
+                    onCreatePost = { onCreatePost(state.club!!.id) },
+                    onEditPost = onEditPost,
+                    onNavigatePosts = onNavigatePosts,
+                    onNavigateMembers = onNavigateMembers,
+                    onNavigateMessages = onNavigateMessages,
+                    onEventClick = onEventClick,
+                    onEventEdit = onEventEdit,
+                    eventsViewModel = eventsViewModel,
+                    postsViewModel = postsViewModel,
+                    viewModel = viewModel,
+                    modifier = Modifier.padding(paddingValues)
+                )
+                else -> ClubHomeFallback(
+                    error = state.error,
+                    onRetry = { viewModel.refresh() },
+                    modifier = Modifier.padding(paddingValues)
+                )
             }
-            state.club != null -> ClubHomeContent(
-                club = state.club!!,
-                selectedTab = selectedTab,
-                onTabSelected = { selectedTab = it },
-                onCreateEvent = onCreateEvent,
-                onCreatePost = { onCreatePost(state.club!!.id) },
-                onEditPost = onEditPost,
-                onNavigatePosts = onNavigatePosts,
-                onNavigateMembers = onNavigateMembers,
-                onNavigateMessages = onNavigateMessages,
-                onEventClick = onEventClick,
-                onEventEdit = onEventEdit,
-                eventsViewModel = eventsViewModel,
-                postsViewModel = postsViewModel,
-                viewModel = viewModel,
-                modifier = Modifier.padding(paddingValues)
-            )
-            else -> ClubHomeFallback(
-                error = state.error,
-                onRetry = { viewModel.refresh() },
-                modifier = Modifier.padding(paddingValues)
-            )
         }
     }
 }
-}
 
 
 
-    @Composable
+@Composable
 fun ClubHomeContent(
     club: ClubHomeDto,
     selectedTab: Int,
@@ -218,17 +217,17 @@ fun ClubHomeContent(
     // selectedTab hoisted to parent
     val scrollState = rememberLazyListState()
     val context = androidx.compose.ui.platform.LocalContext.current
-    
+
     // Get events state and scope at composable level
     val eventsState by eventsViewModel.uiState.collectAsState()
     val postsState by postsViewModel.uiState.collectAsState()
     val scope = rememberCoroutineScope()
-    
-    
+
+
     // Image picker for profile picture and cover photo
     var isUploadingImage by remember { mutableStateOf(false) }
     var imageType by remember { mutableStateOf<String?>(null) } // "profile" or "cover"
-    
+
     val imagePickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
     ) { uri: android.net.Uri? ->
@@ -241,12 +240,12 @@ fun ClubHomeContent(
                         "cover" -> viewModel.updateCoverImage(club.id, uri, context)
                         else -> null
                     }
-                    
+
                     when (result) {
                         is UiState.Success -> {
-                            val message = if (imageType == "profile") 
-                                "Photo de profil mise à jour!" 
-                            else 
+                            val message = if (imageType == "profile")
+                                "Photo de profil mise à jour!"
+                            else
                                 "Photo de couverture mise à jour!"
                             android.widget.Toast.makeText(
                                 context,
@@ -276,7 +275,7 @@ fun ClubHomeContent(
             }
         }
     }
-    
+
     // Calculate fade based on scroll position - use safe access with derivedStateOf
     val scrollOffset = remember {
         derivedStateOf {
@@ -287,7 +286,7 @@ fun ClubHomeContent(
             }
         }
     }
-    
+
     // Fade out header when scrolling (fade starts after 200dp scroll)
     val fadeThreshold = 200f
     val targetAlpha = remember {
@@ -299,7 +298,7 @@ fun ClubHomeContent(
             }
         }
     }
-    
+
     val headerAlpha = animateFloatAsState(
         targetValue = targetAlpha.value,
         label = "headerAlpha"
@@ -328,7 +327,7 @@ fun ClubHomeContent(
                 ) {
                     // Cover photo or gradient background
                     var showFullScreenCover by remember { mutableStateOf(false) }
-                    
+
                     Box(
                         modifier = Modifier.fillMaxSize()
                     ) {
@@ -339,7 +338,7 @@ fun ClubHomeContent(
                                 val baseUrl = Constants.BASE_URL.replace("/api/", "")
                                 if (club.coverImageUrl.startsWith("/")) "$baseUrl${club.coverImageUrl}" else "$baseUrl/${club.coverImageUrl}"
                             }
-                            
+
                             Image(
                                 painter = rememberAsyncImagePainter(fullCoverUrl),
                                 contentDescription = "Cover photo",
@@ -348,7 +347,7 @@ fun ClubHomeContent(
                                     .clickable { showFullScreenCover = true },
                                 contentScale = ContentScale.Crop
                             )
-                            
+
                             // Full screen cover dialog
                             if (showFullScreenCover) {
                                 FullScreenImageDialog(
@@ -371,7 +370,7 @@ fun ClubHomeContent(
                                     )
                             )
                         }
-                        
+
                         // Camera icon for changing cover photo
                         Box(
                             modifier = Modifier
@@ -397,7 +396,7 @@ fun ClubHomeContent(
 
                     // Profile image (circular, positioned at bottom left)
                     var showFullScreenImage by remember { mutableStateOf(false) }
-                    
+
                     Box(
                         modifier = Modifier
                             .align(Alignment.BottomStart)
@@ -411,7 +410,7 @@ fun ClubHomeContent(
                                 val baseUrl = Constants.BASE_URL.replace("/api/", "")
                                 if (club.imageUrl.startsWith("/")) "$baseUrl${club.imageUrl}" else "$baseUrl/${club.imageUrl}"
                             }
-                            
+
                             Image(
                                 painter = rememberAsyncImagePainter(fullImageUrl),
                                 contentDescription = null,
@@ -422,7 +421,7 @@ fun ClubHomeContent(
                                     .clickable { showFullScreenImage = true },
                                 contentScale = ContentScale.Crop
                             )
-                            
+
                             // Camera icon overlay for editing
                             Box(
                                 modifier = Modifier
@@ -443,7 +442,7 @@ fun ClubHomeContent(
                                     modifier = Modifier.size(16.dp)
                                 )
                             }
-                            
+
                             // Full screen image dialog
                             if (showFullScreenImage) {
                                 FullScreenImageDialog(
@@ -466,7 +465,7 @@ fun ClubHomeContent(
                                     fontWeight = FontWeight.Bold
                                 )
                             }
-                            
+
                             // Camera icon overlay for adding profile picture
                             Box(
                                 modifier = Modifier
@@ -554,7 +553,7 @@ fun ClubHomeContent(
                 TabItem("Events", selectedTab == 1) { onTabSelected(1) }
                 TabItem("About", selectedTab == 2) { onTabSelected(2) }
             }
-            
+
             Spacer(modifier = Modifier.height(16.dp))
         }
 
@@ -562,7 +561,7 @@ fun ClubHomeContent(
         when (selectedTab) {
             0 -> {
                 item { FeedHeader(clubImage = club.imageUrl, onCreatePost = onCreatePost) }
-                
+
                 when {
                     postsState.loading -> item {
                         Box(
@@ -600,7 +599,7 @@ fun ClubHomeContent(
                             items(postsState.posts) { post ->
                                 var showDeleteDialog by remember { mutableStateOf(false) }
                                 val currentUserId by postsViewModel.currentUserId.collectAsState()
-                                
+
                                 PostCard(
                                     post = post,
                                     clubName = club.name,
@@ -629,7 +628,7 @@ fun ClubHomeContent(
                                         postsViewModel.replyToComment(post.id, commentId, content)
                                     }
                                 )
-                                
+
                                 if (showDeleteDialog) {
                                     AlertDialog(
                                         onDismissRequest = { showDeleteDialog = false },
@@ -785,7 +784,7 @@ fun FeedHeader(
 }
 
 @Composable
- fun EventsTabContent(
+fun EventsTabContent(
     eventsViewModel: ClubEventsViewModel,
     onEventClick: (String) -> Unit,
     onEventEdit: (String) -> Unit,
@@ -815,7 +814,7 @@ fun FeedHeader(
         ) {
             items(eventsState.events) { event ->
                 var showDeleteDialog by remember { mutableStateOf(false) }
-                
+
                 EventCardWithActions(
                     event = event,
                     onClick = { onEventClick(event.id) },
@@ -824,7 +823,7 @@ fun FeedHeader(
                         showDeleteDialog = true
                     }
                 )
-                
+
                 if (showDeleteDialog) {
                     AlertDialog(
                         onDismissRequest = { showDeleteDialog = false },
@@ -899,7 +898,7 @@ fun EventCardWithActions(
     modifier: Modifier = Modifier
 ) {
     var showMenu by remember { mutableStateOf(false) }
-    
+
     Card(
         modifier = modifier
             .fillMaxWidth()
@@ -943,7 +942,7 @@ fun EventCardWithActions(
                     }
                 }
             }
-            
+
             // Date and Location row
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -958,16 +957,16 @@ fun EventCardWithActions(
                         color = Color.Gray
                     )
                 }
-                
+
                 // Location using new component
                 LocationDisplay(
                     location = event.location,
                     textColor = Color.Gray
                 )
             }
-            
+
             event.description?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
-            
+
             // Display event image if available
             event.imageUrl?.let { imageUrl ->
                 val fullImageUrl = if (imageUrl.startsWith("http")) {
@@ -976,7 +975,7 @@ fun EventCardWithActions(
                     val baseUrl = Constants.BASE_URL.replace("/api/", "")
                     "$baseUrl$imageUrl"
                 }
-                
+
                 Spacer(modifier = Modifier.height(8.dp))
                 Image(
                     painter = rememberAsyncImagePainter(fullImageUrl),
