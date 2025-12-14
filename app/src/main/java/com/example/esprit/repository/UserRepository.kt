@@ -12,17 +12,24 @@ class UserRepository @Inject constructor(
 
     /**
      * Récupère l'utilisateur connecté via /auth/me
+     * Le token est ajouté automatiquement par AuthInterceptor.
      */
-    suspend fun getMe(token: String): User {
-        return api.getMe("Bearer $token")
+    suspend fun getMe(): User {
+        return api.getMe()
     }
 
     /**
-     * Met à jour le profil utilisateur (cas admin ou futur écran profil).
+     * Récupère un utilisateur par son ID
+     */
+    suspend fun getUserById(userId: String): User {
+        return api.getUserById(userId)
+    }
+
+    /**
+     * Met à jour le profil utilisateur.
      * On n’envoie QUE les champs non nuls.
      */
     suspend fun updateUser(
-        token: String,
         id: String,
         firstName: String? = null,
         lastName: String? = null,
@@ -30,7 +37,7 @@ class UserRepository @Inject constructor(
         avatar: String? = null,
         age: Int? = null,
         studentId: String? = null,
-        classGroup: String? = null,   // 👈 NEW
+        classGroup: String? = null,
     ): User {
         val body = mutableMapOf<String, Any>()
 
@@ -40,27 +47,23 @@ class UserRepository @Inject constructor(
         avatar?.let { body["avatar"] = it }
         age?.let { body["age"] = it }
         studentId?.let { body["studentId"] = it }
-        classGroup?.let { body["classGroup"] = it }   // 👈 send it if not null
+        classGroup?.let { body["classGroup"] = it }
 
         return api.updateUser(
-            token = "Bearer $token",
             id = id,
             body = body
         )
     }
 
     /**
-     * Changer seulement le mot de passe de l'utilisateur connecté.
-     * Doit correspondre à ton endpoint Nest:
-     * POST /utilisateurs/me/password  (ou autre → adapte ici)
+     * Changer le mot de passe de l'utilisateur connecté.
+     * Le token est ajouté automatiquement.
      */
     suspend fun changeMyPassword(
-        token: String,
         oldPassword: String,
         newPassword: String
     ): Map<String, String> {
         return api.changeMyPassword(
-            token = "Bearer $token",
             body = mapOf(
                 "oldPassword" to oldPassword,
                 "newPassword" to newPassword

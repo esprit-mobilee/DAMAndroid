@@ -1,4 +1,4 @@
-package com.esprit.connect.ui.theme
+package com.example.esprit.ui.theme
 
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme

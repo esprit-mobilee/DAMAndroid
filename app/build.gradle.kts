@@ -1,7 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.compose)
+    // Note: kotlin-compose plugin removed for Kotlin 1.9.x compatibility
+    // Compose Compiler is configured via composeOptions below
 
     // for annotation processing
     id("kotlin-kapt")
@@ -21,6 +22,10 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        
+        // API Key from local.properties
+        val apiKey = project.findProperty("OPENAI_API_KEY") as String? ?: ""
+        buildConfigField("String", "OPENAI_API_KEY", "\"$apiKey\"")
     }
 
     buildTypes {
@@ -42,6 +47,16 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true  // Enable BuildConfig for API key
+    }
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.8"
+    }
+    
+    // Fix kapt dependency on R.jar
+    kapt {
+        correctErrorTypes = true
+        useBuildCache = true
     }
 }
 
@@ -56,7 +71,9 @@ dependencies {
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.compose.foundation)
+    implementation(libs.androidx.benchmark.common)
+    implementation(libs.identity.credential)
+    implementation(libs.androidx.compose.animation)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -83,9 +100,9 @@ dependencies {
     // OkHttp logging
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
-    // Hilt (version comes from root)
-    implementation("com.google.dagger:hilt-android:2.57.2") // <-- CHANGE THIS
-    kapt("com.google.dagger:hilt-android-compiler:2.57.2") // <-- AND THIS
+    // Hilt (compatible with Kotlin 1.9.x)
+    implementation("com.google.dagger:hilt-android:2.48")
+    kapt("com.google.dagger:hilt-android-compiler:2.48")
 
 
     // Hilt navigation compose
@@ -100,20 +117,17 @@ dependencies {
     // Material icons
     implementation("androidx.compose.material:material-icons-core:1.7.5")
     implementation("androidx.compose.material:material-icons-extended:1.7.5")
-    implementation("androidx.compose.ui:ui:1.6.0")
-    implementation("androidx.compose.material3:material3:1.2.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
 
-    // ZXing for QR code generation
-    implementation("com.google.zxing:core:3.5.3")
+    // OpenStreetMap (osmdroid)
+    implementation("org.osmdroid:osmdroid-android:6.1.18")
 
-    // Retrofit + Gson
-    implementation("com.squareup.retrofit2:retrofit:2.9.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
-    implementation("com.squareup.okhttp3:logging-interceptor:4.9.3")
+    // PDFBox-Android
+    implementation(libs.pdfbox.android)
 
-    // Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    // Socket.IO
+    implementation("io.socket:socket.io-client:2.1.0") {
+        exclude(group = "org.json", module = "json")
+    }
 
 }
 
@@ -121,5 +135,15 @@ dependencies {
 configurations.all {
     resolutionStrategy {
         force("com.squareup:javapoet:1.13.0")
+        // Force all Kotlin dependencies to use version 1.9.22 for compatibility with kapt
+        force("org.jetbrains.kotlin:kotlin-stdlib:1.9.22")
+        force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.22")
+        force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.22")
+        force("org.jetbrains.kotlin:kotlin-reflect:1.9.22")
     }
+    
+    // Check for Duplicate class error (bcprov-jdk15on vs bcprov-jdk15to18)
+    // We force exclusion of the older one
+    exclude(group = "org.bouncycastle", module = "bcprov-jdk15on")
+    exclude(group = "org.bouncycastle", module = "bcpkix-jdk15on")
 }

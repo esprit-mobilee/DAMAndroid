@@ -22,7 +22,7 @@ import com.example.esprit.ui.components.EspritDrawer
 import com.example.esprit.ui.components.DrawerDestination
 import com.example.esprit.ui.theme.BgGray
 import com.example.esprit.ui.theme.TextGray
-import com.example.esprit.util.Resource
+import com.example.esprit.util.UiState
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
@@ -95,7 +95,7 @@ fun TimetableScreen(
                     .background(BgGray)
             ) {
                 when (state) {
-                    is Resource.Loading -> {
+                    is UiState.Loading -> {
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
@@ -104,9 +104,9 @@ fun TimetableScreen(
                         }
                     }
 
-                    is Resource.Error -> {
+                    is UiState.Error -> {
                         Text(
-                            text = (state as Resource.Error).message,
+                            text = (state as UiState.Error).message ?: "Error",
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(16.dp),
@@ -114,8 +114,8 @@ fun TimetableScreen(
                         )
                     }
 
-                    is Resource.Success -> {
-                        val data = (state as Resource.Success<List<TimetableItem>>).data
+                    is UiState.Success<*> -> {
+                        val data = (state as UiState.Success<List<TimetableItem>>).data ?: emptyList()
                         LazyColumn(
                             modifier = Modifier
                                 .fillMaxSize()

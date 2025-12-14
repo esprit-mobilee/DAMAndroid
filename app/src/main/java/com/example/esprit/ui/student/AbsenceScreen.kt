@@ -1,7 +1,5 @@
 package com.example.esprit.ui.student
 
-
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,25 +12,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.esprit.ui.theme.RedPrimary
+import com.example.esprit.model.AbsenceItem
 import com.example.esprit.ui.theme.BgGray
+import com.example.esprit.ui.theme.RedPrimary
 import com.example.esprit.ui.theme.TextGray
-
+import com.example.esprit.util.UiState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AbsenceScreen(
-    token: String,
-    viewModel: AbsenceViewModel = viewModel()
+    viewModel: AbsenceViewModel = hiltViewModel()
 ) {
-    val absences by viewModel.absences.collectAsState()
-    val loading by viewModel.loading.collectAsState()
-    val error by viewModel.error.collectAsState()
-    val viewModel: AbsenceViewModel = hiltViewModel()
+    // observe ui state from VM
+    val uiState by viewModel.uiState.collectAsState()
 
+    // load once
     LaunchedEffect(Unit) {
-        viewModel.fetchAbsences(token)
+        viewModel.fetchAbsences()
     }
 
     Scaffold(
@@ -52,26 +48,38 @@ fun AbsenceScreen(
                 .background(BgGray),
             contentAlignment = Alignment.Center
         ) {
-            when {
-                loading -> CircularProgressIndicator(color = RedPrimary)
-                error != null -> Text(
-                    text = "Erreur : ${error ?: "Impossible de charger les absences"}",
-                    color = MaterialTheme.colorScheme.error,
-                    textAlign = TextAlign.Center
-                )
-                absences.isEmpty() -> Text(
-                    text = "Aucune absence enregistrée 🎉",
-                    color = TextGray,
-                    textAlign = TextAlign.Center
-                )
-                else -> LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(absences) { absence ->
-                        AbsenceCard(absence)
+            when (val state = uiState) {
+                is UiState.Loading -> {
+                    CircularProgressIndicator(color = RedPrimary)
+                }
+
+                is UiState.Error -> {
+                    Text(
+                        text = "Erreur : ${state.message}",
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.Center
+                    )
+                }
+
+                is UiState.Success -> {
+                    val absences = state.data
+                    if (absences.isEmpty()) {
+                        Text(
+                            text = "Aucune absence enregistrée 🎉",
+                            color = TextGray,
+                            textAlign = TextAlign.Center
+                        )
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(absences) { absence ->
+                                AbsenceCard(absence)
+                            }
+                        }
                     }
                 }
             }
@@ -80,7 +88,7 @@ fun AbsenceScreen(
 }
 
 @Composable
-fun AbsenceCard(absence: com.example.esprit.model.AbsenceItem) {
+fun AbsenceCard(absence: AbsenceItem) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),

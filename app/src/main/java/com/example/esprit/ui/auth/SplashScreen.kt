@@ -1,19 +1,13 @@
 package com.example.esprit.ui.auth
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.esprit.R
 import com.example.esprit.model.Role
@@ -40,16 +34,12 @@ fun SplashScreen(
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-
-            // 1) logo
             Image(
                 painter = painterResource(id = R.drawable.esprit_logo),
                 contentDescription = "ESPRIT",
             )
-
             Spacer(modifier = Modifier.height(16.dp))
-
-
+            CircularProgressIndicator()
         }
     }
 }

@@ -19,52 +19,77 @@ data class LoginUiState(
 @HiltViewModel
 class LoginViewModel @Inject constructor(
     private val repo: AuthRepository,
-    private val dataStore: DataStoreManager
+    private val dataStore: DataStoreManager,
+    private val authManager: com.example.esprit.util.AuthManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState
 
-    fun login(identifier: String, password: String, onSuccess: (Role) -> Unit) {
+    fun login(identifier: String, password: String, rememberMe: Boolean, onLoginSuccess: (Role) -> Unit) {
         viewModelScope.launch {
             _uiState.value = LoginUiState(isLoading = true)
+
             try {
-                // 1) appel backend
-                val res = repo.login(identifier, password)
-
-                // 2) on sauvegarde le token
-                dataStore.saveToken(res.accessToken)
-
-                // 3) sécuriser le champ role (peut être null ou vide)
-                val backendRole = res.role?.uppercase() ?: "STUDENT"
+                // 1. Invalider le cache avant le login pour forcer le rechargement du nouveau token
+                authManager.onLogin()
                 
-                // 🔍 Debug logging
-                android.util.Log.d("LoginVM", "Backend role (raw): '${res.role}'")
-                android.util.Log.d("LoginVM", "Backend role (uppercase): '$backendRole'")
+                // 2. login -> token
+                val authRes = repo.login(identifier, password)
 
-                val role = when (backendRole) {
-                    "STUDENT" -> Role.STUDENT
-                    "TEACHER" -> Role.TEACHER
-                    "PARENT"  -> Role.PARENT
-                    "ADMIN"   -> Role.ADMIN
-                    else      -> {
-                        android.util.Log.e("LoginVM", "Unknown role: '$backendRole', defaulting to STUDENT")
-                        Role.STUDENT   // fallback
-                    }
-                }
+                // 3. store token
+                dataStore.saveToken(authRes.accessToken)
                 
-                android.util.Log.d("LoginVM", "Mapped to Role: $role")
+                // 4. store remember preference
+                dataStore.saveRememberMe(rememberMe)
 
-                // 4) navigation
-                onSuccess(role)
+                // 5. get /auth/me to know roles
+                val me = repo.me()
 
-                // 5) reset UI
-                _uiState.value = LoginUiState()
+                val finalRole = pickBestRole(
+                    listRoles = me.roles,
+                    stringRole = me.role
+                )
+
+                _uiState.value = LoginUiState(isLoading = false, error = null)
+                onLoginSuccess(finalRole)
+
             } catch (e: Exception) {
                 _uiState.value = LoginUiState(
-                    error = e.message ?: "Erreur inconnue"
+                    isLoading = false,
+                    error = e.message ?: "Erreur de connexion"
                 )
             }
         }
+    }
+
+    private fun pickBestRole(
+        listRoles: List<Role>?,
+        stringRole: String?
+    ): Role {
+        if (!listRoles.isNullOrEmpty()) {
+            if (listRoles.contains(Role.ADMIN)) return Role.ADMIN
+            if (listRoles.contains(Role.TEACHER)) return Role.TEACHER
+            if (listRoles.contains(Role.PARENT)) return Role.PARENT
+            if (listRoles.contains(Role.PRESIDENT)) return Role.STUDENT
+            if (listRoles.contains(Role.STUDENT)) return Role.STUDENT
+            if (listRoles.contains(Role.CLUB)) return Role.CLUB
+
+        }
+
+        if (!stringRole.isNullOrBlank()) {
+            return when (stringRole.uppercase()) {
+                "ADMIN" -> Role.ADMIN
+                "TEACHER" -> Role.TEACHER
+                "PARENT" -> Role.PARENT
+                "PRESIDENT" -> Role.STUDENT
+                "CLUB" -> Role.CLUB
+                "STUDENT", "USER" -> Role.STUDENT
+
+                else -> Role.STUDENT
+            }
+        }
+
+        return Role.STUDENT
     }
 }

@@ -11,9 +11,9 @@ class AbsenceRepository @Inject constructor(
 ) {
     /**
      * Fetches the list of absences for the authenticated user.
-     * Requires a valid JWT token.
+     * The JWT token is automatically added by AuthInterceptor.
      */
-    suspend fun getAbsences(token: String): List<AbsenceItem> {
-        return api.getAbsences("Bearer $token")
+    suspend fun getAbsences(): List<AbsenceItem> {
+        return api.getAbsences()
     }
 }

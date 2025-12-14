@@ -11,12 +11,30 @@ class AuthRepository @Inject constructor(
     suspend fun login(identifiant: String, password: String): AuthResponse {
         return api.login(
             mapOf(
-                "identifiant" to identifiant,  // 👈 match NestJS DTO
+                "identifiant" to identifiant,
                 "password" to password
             )
         )
     }
 
-    suspend fun me(token: String): User =
-        api.getMe("Bearer $token")
+    // token added by interceptor
+    suspend fun me(): User = api.getMe()
+
+    suspend fun forgotPassword(email: String) {
+        api.forgotPassword(mapOf("email" to email))
+    }
+
+    suspend fun verifyCode(email: String, code: String) {
+        api.verifyCode(mapOf("email" to email, "code" to code))
+    }
+
+    suspend fun resetPassword(email: String, code: String, newPass: String) {
+        api.resetPassword(
+            mapOf(
+                "email" to email,
+                "code" to code,
+                "newPassword" to newPass
+            )
+        )
+    }
 }

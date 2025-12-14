@@ -24,12 +24,14 @@ import com.example.esprit.ui.theme.TextGray
 @Composable
 fun LoginScreen(
     viewModel: LoginViewModel,
-    onLoginSuccess: (Role) -> Unit
+    onLoginSuccess: (Role) -> Unit,
+    onForgotPasswordClick: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var identifier by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    var rememberMe by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -84,10 +86,38 @@ fun LoginScreen(
                     }
                 }
             )
+            
+            // Remember Me & Forgot Password Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = rememberMe,
+                        onCheckedChange = { rememberMe = it },
+                        colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
+                    )
+                    Text(
+                        text = "Se souvenir de moi",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextGray
+                    )
+                }
+                
+                TextButton(onClick = onForgotPasswordClick) {
+                    Text(
+                        text = "Mot de passe oublié ?",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
 
             Button(
                 onClick = {
-                    viewModel.login(identifier, password, onLoginSuccess)
+                    viewModel.login(identifier, password, rememberMe, onLoginSuccess)
                 },
                 modifier = Modifier
                     .fillMaxWidth()
