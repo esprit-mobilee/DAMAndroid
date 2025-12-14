@@ -6,6 +6,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.animation.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -27,9 +28,12 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
+import com.example.esprit.model.LocationData
+import com.example.esprit.ui.components.MapLocationPickerScreen
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -58,7 +62,9 @@ fun AdminInternshipFormScreen(
     var title by remember { mutableStateOf("") }
     var company by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
-    var location by remember { mutableStateOf("") }
+    var locationAddress by remember { mutableStateOf("") }
+    var locationLatitude by remember { mutableStateOf<Double?>(null) }
+    var locationLongitude by remember { mutableStateOf<Double?>(null) }
     var duration by remember { mutableStateOf("8") }
     var salary by remember { mutableStateOf("") }
     
@@ -86,6 +92,9 @@ fun AdminInternshipFormScreen(
     // Wizard State
     var currentStep by remember { mutableIntStateOf(0) }
     val totalSteps = 3
+    
+    // Map Picker State
+    var showMapPicker by remember { mutableStateOf(false) }
 
     // Helper function to format date for display
     fun formatDateForDisplay(dateStr: String): String {
@@ -103,7 +112,9 @@ fun AdminInternshipFormScreen(
             title = offer.title
             company = offer.company
             description = offer.description
-            location = offer.location ?: ""
+            locationAddress = offer.location?.address ?: ""
+            locationLatitude = offer.location?.latitude
+            locationLongitude = offer.location?.longitude
             duration = offer.duration.toString()
             salary = offer.salary?.toString() ?: ""
             existingLogoUrl = offer.logoUrl
@@ -142,7 +153,7 @@ fun AdminInternshipFormScreen(
         if (title.isBlank()) { titleError = "Requis"; isValid = false } else titleError = null
         if (company.isBlank()) { companyError = "Requis"; isValid = false } else companyError = null
         if (description.isBlank()) { descriptionError = "Requis"; isValid = false } else descriptionError = null
-        if (location.isBlank()) { locationError = "Requis"; isValid = false } else locationError = null
+        if (locationAddress.isBlank()) { locationError = "Requis"; isValid = false } else locationError = null
         return isValid
     }
 
@@ -173,13 +184,15 @@ fun AdminInternshipFormScreen(
 
         if (offerId == null) {
             viewModel.createOffer(
-                title, company, description, location, duration.toInt(), salaryInt, logoPart,
+                title, company, description, locationAddress, locationLatitude, locationLongitude,
+                duration.toInt(), salaryInt, logoPart,
                 tagsList, internshipTypeStr, procedureStr, interviewProcessStr,
                 startDateStr, interviewDetailsStr, positionsAvailableInt, onDone
             )
         } else {
             viewModel.updateOffer(
-                offerId, title, company, description, location, duration.toInt(), salaryInt, logoPart,
+                offerId, title, company, description, locationAddress, locationLatitude, locationLongitude,
+                duration.toInt(), salaryInt, logoPart,
                 tagsList, internshipTypeStr, procedureStr, interviewProcessStr,
                 startDateStr, interviewDetailsStr, positionsAvailableInt, onDone
             )
@@ -289,7 +302,8 @@ fun AdminInternshipFormScreen(
                                     title = title, onTitleChange = { title = it; titleError = null }, titleError = titleError,
                                     company = company, onCompanyChange = { company = it; companyError = null }, companyError = companyError,
                                     description = description, onDescriptionChange = { description = it; descriptionError = null }, descriptionError = descriptionError,
-                                    location = location, onLocationChange = { location = it; locationError = null }, locationError = locationError,
+                                    locationAddress = locationAddress, onLocationChange = { locationAddress = it; locationError = null }, locationError = locationError,
+                                    onMapPickerClick = { showMapPicker = true },
                                     selectedLogoUri = selectedLogoUri, existingLogoUrl = existingLogoUrl, onLogoClick = { imagePickerLauncher.launch("image/*") }
                                 )
                                 1 -> Step2Details(
@@ -312,6 +326,22 @@ fun AdminInternshipFormScreen(
                 }
             }
         }
+    }
+    
+    // Map Picker Dialog
+    if (showMapPicker) {
+        MapLocationPickerScreen(
+            initialLocation = if (locationAddress.isNotBlank() && locationLatitude != null && locationLongitude != null) {
+                LocationData(locationAddress, locationLatitude, locationLongitude)
+            } else null,
+            onLocationSelected = { selectedLocation ->
+                locationAddress = selectedLocation.address ?: ""
+                locationLatitude = selectedLocation.latitude
+                locationLongitude = selectedLocation.longitude
+                locationError = null
+            },
+            onBack = { showMapPicker = false }
+        )
     }
 }
 
@@ -391,7 +421,8 @@ fun Step1BasicInfo(
     title: String, onTitleChange: (String) -> Unit, titleError: String?,
     company: String, onCompanyChange: (String) -> Unit, companyError: String?,
     description: String, onDescriptionChange: (String) -> Unit, descriptionError: String?,
-    location: String, onLocationChange: (String) -> Unit, locationError: String?,
+    locationAddress: String, onLocationChange: (String) -> Unit, locationError: String?,
+    onMapPickerClick: () -> Unit,
     selectedLogoUri: Uri?, existingLogoUrl: String?, onLogoClick: () -> Unit
 ) {
     Text("Informations Générales", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
@@ -399,20 +430,58 @@ fun Step1BasicInfo(
     ModernTextField(value = title, onValueChange = onTitleChange, label = "Titre du stage", icon = Icons.Default.WorkOutline, error = titleError)
     ModernTextField(value = company, onValueChange = onCompanyChange, label = "Entreprise", icon = Icons.Default.Business, error = companyError)
     
-    // Location Dropdown for Grand Tunis
-    val tunisLocations = listOf(
-        "Tunis", "Ariana", "Ben Arous", "Manouba", 
-        "La Marsa", "Carthage", "Le Kram", "La Goulette", 
-        "Les Berges du Lac 1", "Les Berges du Lac 2", 
-        "Centre Urbain Nord", "Ghazela", "Ennasr", "Menzah", "Charguia", "Raoued"
-    )
-    DropdownField(
-        label = "Lieu (Grand Tunis)", 
-        options = tunisLocations, 
-        selectedOption = location, 
-        onOptionSelected = onLocationChange, 
-        icon = Icons.Default.LocationOn
-    )
+    // Location Picker Button
+    OutlinedButton(
+        onClick = onMapPickerClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.outlinedButtonColors(
+            containerColor = if (locationError != null) MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.1f) else Color.Transparent
+        ),
+        border = BorderStroke(
+            1.dp,
+            if (locationError != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline
+        )
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(
+                    Icons.Default.LocationOn,
+                    contentDescription = null,
+                    tint = if (locationError != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = if (locationAddress.isBlank()) "Sélectionner sur la carte" else locationAddress,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (locationAddress.isBlank()) Color.Gray else MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Icon(
+                Icons.Default.Map,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+    if (locationError != null) {
+        Text(
+            text = locationError,
+            color = MaterialTheme.colorScheme.error,
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(start = 16.dp, top = 4.dp)
+        )
+    }
+    
     
     OutlinedTextField(
         value = description,

@@ -2,13 +2,19 @@ package com.example.esprit.model
 
 import com.google.gson.annotations.SerializedName
 
+data class LocationData(
+    val address: String? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null
+)
+
 data class InternshipOffer(
     @SerializedName("_id")
     val id: String? = null,
     val title: String,
     val company: String,
     val description: String,
-    val location: String? = null,
+    val location: LocationData? = null,
     val duration: Int,
     val salary: Int? = null,
     val logoUrl: String? = null,
@@ -23,4 +29,8 @@ data class InternshipOffer(
     val interviewDetails: String? = null,
     val positionsAvailable: Int? = null,
     val applicationsCount: Int? = null,
-)
+) {
+    // Helper property for backward compatibility - returns address string
+    val locationAddress: String?
+        get() = location?.address
+}

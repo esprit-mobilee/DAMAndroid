@@ -1,8 +1,10 @@
 package com.example.esprit.ui.student.internships
 
-
-import com.example.esprit.ui.student.internships.StudentInternshipViewModel
+import android.Manifest
+import android.app.Activity
+import android.speech.RecognizerIntent
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -11,30 +13,36 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.outlined.FilterList
+import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.esprit.model.InternshipOffer
+import com.example.esprit.ui.components.ModernInternshipCard
+import com.example.esprit.ui.components.VoiceRecognitionDialog
 import com.example.esprit.util.Constants
-import com.example.esprit.ui.student.internships.StudentInternshipCard
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,24 +54,30 @@ fun StudentSearchScreen(
 ) {
     val allOffersState by viewModel.uiState.collectAsState()
     val favoritesState by favoritesViewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     
+    // State
     var searchQuery by remember { mutableStateOf("") }
     var selectedLocation by remember { mutableStateOf<String?>(null) }
     var selectedType by remember { mutableStateOf<String?>(null) }
     var selectedTag by remember { mutableStateOf<String?>(null) }
     var minSalary by remember { mutableStateOf(0) }
     var minDuration by remember { mutableStateOf(0) }
-    var showAdvancedFilters by remember { mutableStateOf(false) }
     
-    // Charger les offres et favoris
+    // BottomSheet State
+    val sheetState = rememberModalBottomSheetState()
+    var showFilterSheet by remember { mutableStateOf(false) }
+    
+    // Initial Load
     LaunchedEffect(Unit) {
         viewModel.loadOffers()
         favoritesViewModel.loadFavorites()
     }
     
-    // Extraire les valeurs uniques pour les filtres
+    // Extract Filters
     val locations = remember(allOffersState.offers) {
-        allOffersState.offers.mapNotNull { it.location }.distinct().sorted()
+        allOffersState.offers.mapNotNull { it.locationAddress }.distinct().sorted()
     }
     val types = remember(allOffersState.offers) {
         allOffersState.offers.mapNotNull { it.internshipType }.distinct().sorted()
@@ -72,15 +86,9 @@ fun StudentSearchScreen(
         allOffersState.offers.flatMap { it.tags ?: emptyList() }.distinct().sorted()
     }
     
-    // Filtrer les offres
+    // Filter Logic
     val filteredOffers = remember(
-        allOffersState.offers,
-        searchQuery,
-        selectedLocation,
-        selectedType,
-        selectedTag,
-        minSalary,
-        minDuration
+        allOffersState.offers, searchQuery, selectedLocation, selectedType, selectedTag, minSalary, minDuration
     ) {
         allOffersState.offers.filter { offer ->
             val matchesSearch = searchQuery.isBlank() ||
@@ -89,7 +97,7 @@ fun StudentSearchScreen(
                 offer.description.contains(searchQuery, ignoreCase = true) ||
                 offer.tags?.any { it.contains(searchQuery, ignoreCase = true) } == true
             
-            val matchesLocation = selectedLocation == null || offer.location == selectedLocation
+            val matchesLocation = selectedLocation == null || offer.locationAddress == selectedLocation
             val matchesType = selectedType == null || offer.internshipType == selectedType
             val matchesTag = selectedTag == null || offer.tags?.contains(selectedTag) == true
             val matchesSalary = offer.salary == null || offer.salary >= minSalary
@@ -98,565 +106,190 @@ fun StudentSearchScreen(
             matchesSearch && matchesLocation && matchesType && matchesTag && matchesSalary && matchesDuration
         }
     }
-    
-    // Recommandations basées sur les favoris
-    val recommendedOffers = remember(favoritesState.offers) {
-        // Les recommandations sont les stages favoris
-        favoritesState.offers.take(10)
+
+    // Voice Search Launcher
+    val speechLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val results = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+            if (!results.isNullOrEmpty()) {
+                searchQuery = results[0]
+                viewModel.addToSearchHistory(searchQuery)
+            }
+        }
     }
     
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            val intent = android.content.Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE, java.util.Locale.getDefault())
+            }
+            speechLauncher.launch(intent)
+        }
+    }
+
     Scaffold(
+        containerColor = Color(0xFFF9FAFB), // Very light gray bg
         topBar = {
-            TopAppBar(
-                title = { Text("Recherche de stages") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Retour")
+            SearchHeader(
+                searchQuery = searchQuery,
+                onSearchChange = { searchQuery = it },
+                onBack = onBack,
+                onFilterClick = { showFilterSheet = true },
+                onMicClick = {
+                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                         val intent = android.content.Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                            putExtra(RecognizerIntent.EXTRA_LANGUAGE, java.util.Locale.getDefault())
+                        }
+                        speechLauncher.launch(intent)
+                    } else {
+                        permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                     }
-                }
+                },
+                activeFiltersCount = listOfNotNull(selectedLocation, selectedType, selectedTag).size + (if(minSalary>0) 1 else 0) + (if(minDuration>0) 1 else 0)
             )
         }
-    ) { innerPadding ->
+    ) { padding ->
         LazyColumn(
             modifier = Modifier
-                .padding(innerPadding)
+                .padding(padding)
                 .fillMaxSize(),
-            contentPadding = PaddingValues(vertical = 8.dp)
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Barre de recherche
-            item {
-                val context = androidx.compose.ui.platform.LocalContext.current
-                val speechLauncher = rememberLauncherForActivityResult(
-                    contract = androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
-                ) { result ->
-                    if (result.resultCode == android.app.Activity.RESULT_OK) {
-                        val data = result.data
-                        val results = data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)
-                        if (!results.isNullOrEmpty()) {
-                            searchQuery = results[0]
-                            viewModel.addToSearchHistory(searchQuery)
-                        }
-                    }
-                }
-
-                var isSearchFocused by remember { mutableStateOf(false) }
-
-                Column {
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                            .onFocusChanged { isSearchFocused = it.isFocused },
-                        placeholder = { Text("Rechercher un stage...") },
-                        leadingIcon = {
-                            Icon(Icons.Default.Search, contentDescription = null)
-                        },
-                        trailingIcon = {
-                            Row {
-                                IconButton(onClick = {
-                                    val intent = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                                        putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                                        putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, "fr-FR")
-                                        putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-                                        putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Parlez maintenant...")
-                                    }
-                                    try {
-                                        speechLauncher.launch(intent)
-                                    } catch (e: Exception) {
-                                        // Handle exception (e.g. no voice recognizer)
-                                    }
-                                }) {
-                                    Icon(Icons.Default.Mic, contentDescription = "Recherche vocale")
-                                }
-                                if (searchQuery.isNotEmpty()) {
-                                    IconButton(onClick = { searchQuery = "" }) {
-                                        Icon(Icons.Default.Clear, contentDescription = "Effacer")
-                                    }
-                                }
-                            }
-                        },
-                        singleLine = true,
-                        shape = RoundedCornerShape(12.dp),
-                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                            imeAction = androidx.compose.ui.text.input.ImeAction.Search
-                        ),
-                        keyboardActions = androidx.compose.foundation.text.KeyboardActions(
-                            onSearch = {
-                                viewModel.addToSearchHistory(searchQuery)
-                            }
-                        )
-                    )
-                    
-                    // Historique de recherche
-                    if (isSearchFocused && searchQuery.isBlank() && allOffersState.searchHistory.isNotEmpty()) {
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 4.dp),
-                            shape = RoundedCornerShape(8.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                        ) {
-                            Column {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(8.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "Recherches récentes",
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = Color.Gray
-                                    )
-                                    TextButton(onClick = { viewModel.clearSearchHistory() }) {
-                                        Text("Effacer", style = MaterialTheme.typography.labelSmall)
-                                    }
-                                }
-                                
-                                allOffersState.searchHistory.forEach { historyItem ->
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable { 
-                                                searchQuery = historyItem 
-                                                viewModel.addToSearchHistory(historyItem) // Move to top
-                                            }
-                                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Icon(
-                                            Icons.Default.History,
-                                            contentDescription = null,
-                                            tint = Color.Gray,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Spacer(Modifier.width(12.dp))
-                                        Text(
-                                            text = historyItem,
-                                            style = MaterialTheme.typography.bodyMedium
-                                        )
-                                    }
-                                    Divider(color = MaterialTheme.colorScheme.surfaceVariant, thickness = 0.5.dp)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            
-            // Chips de filtres horizontaux scrollables
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    // Localisation
-                    FilterChip(
-                        selected = selectedLocation != null,
-                        onClick = { showAdvancedFilters = true },
-                        label = {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.LocationOn,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Text(selectedLocation ?: "Tous")
-                            }
-                        },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Color(0xFFE3F2FD),
-                            selectedLabelColor = Color(0xFF1976D2)
-                        )
-                    )
-                    
-                    // Type
-                    FilterChip(
-                        selected = selectedType != null,
-                        onClick = { showAdvancedFilters = true },
-                        label = {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.Work,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Text(selectedType ?: "Tous")
-                            }
-                        },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Color(0xFFE3F2FD),
-                            selectedLabelColor = Color(0xFF1976D2)
-                        )
-                    )
-                    
-                    // Tags
-                    FilterChip(
-                        selected = selectedTag != null,
-                        onClick = { showAdvancedFilters = true },
-                        label = {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.Label,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Text(selectedTag ?: "Tous")
-                            }
-                        },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Color(0xFFE3F2FD),
-                            selectedLabelColor = Color(0xFF1976D2)
-                        )
-                    )
-                    
-                    // Salaire
-                    if (minSalary > 0) {
-                        FilterChip(
-                            selected = true,
-                            onClick = { showAdvancedFilters = true },
-                            label = {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Text("💰")
-                                    Text("Salaire > $minSalary TND")
-                                }
-                            },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = Color(0xFFE3F2FD),
-                                selectedLabelColor = Color(0xFF1976D2)
-                            )
-                        )
-                    } else {
-                        FilterChip(
-                            selected = false,
-                            onClick = { showAdvancedFilters = true },
-                            label = {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Text("💰")
-                                    Text("Salaire >")
-                                }
-                            }
-                        )
-                    }
-                    
-                    // Durée
-                    if (minDuration > 0) {
-                        FilterChip(
-                            selected = true,
-                            onClick = { showAdvancedFilters = true },
-                            label = {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Default.AccessTime,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Text("Durée > $minDuration sem.")
-                                }
-                            },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = Color(0xFFE3F2FD),
-                                selectedLabelColor = Color(0xFF1976D2)
-                            )
-                        )
-                    } else {
-                        FilterChip(
-                            selected = false,
-                            onClick = { showAdvancedFilters = true },
-                            label = {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Default.AccessTime,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Text("Durée >")
-                                }
-                            }
-                        )
-                    }
-                }
-            }
-            
-            // Section "Recommandés pour vous"
-            if (recommendedOffers.isNotEmpty() && searchQuery.isBlank()) {
-                item {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 16.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Favorite,
-                                contentDescription = null,
-                                tint = Color(0xFFD32F2F),
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Text(
-                                text = "Recommandés pour vous",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                        
+            // Recommended Section (Favorites)
+            if (searchQuery.isBlank() && favoritesState.offers.isNotEmpty()) {
+               item {
+                   Column(
+                       modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                   ) {
+                       Row(
+                           verticalAlignment = Alignment.CenterVertically,
+                           modifier = Modifier.padding(bottom = 12.dp)
+                       ) {
+                           Icon(Icons.Default.AutoAwesome, null, tint = Color(0xFFD32F2F), modifier = Modifier.size(20.dp))
+                           Spacer(Modifier.width(8.dp))
+                           Text(
+                               "Recommandés pour vous",
+                               style = MaterialTheme.typography.titleMedium,
+                               fontWeight = FontWeight.Bold,
+                               color = Color(0xFF1F2937)
+                           )
+                       }
+                       
                         LazyRow(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentPadding = PaddingValues(horizontal = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            contentPadding = PaddingValues(horizontal = 4.dp)
                         ) {
-                            items(recommendedOffers) { offer ->
-                                RecommendedOfferCard(
-                                    offer = offer,
-                                    onClick = { offer.id?.let { onOfferClick(it) } }
-                                )
+                            items(favoritesState.offers) { offer ->
+                                MiniRecommendedCard(offer) { offer.id?.let { onOfferClick(it) } }
                             }
                         }
-                    }
+                   }
+                   Spacer(Modifier.height(8.dp))
+               }
+            }
+
+            // Results Header
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "${filteredOffers.size} résultats",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF1F2937)
+                    )
+                    Spacer(Modifier.weight(1f))
+                    // Active Filters Chips (Quick Remove)
+                    if (selectedLocation != null) QuickFilterChip(selectedLocation!!) { selectedLocation = null }
+                    if (selectedType != null) QuickFilterChip(selectedType!!) { selectedType = null }
                 }
             }
-            
-            // Liste des résultats
+
+            // List
             items(filteredOffers) { offer ->
-                CompactInternshipItem(
+                ModernInternshipCard(
                     offer = offer,
-                    onClick = { offer.id?.let { onOfferClick(it) } },
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                    onClick = { offer.id?.let { onOfferClick(it) } }
                 )
             }
             
-            if (filteredOffers.isEmpty() && searchQuery.isNotBlank()) {
+            // Empty State
+            if (filteredOffers.isEmpty()) {
                 item {
-                    Text(
-                        text = "Aucun résultat trouvé",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(32.dp),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color.Gray
-                    )
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(top = 64.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(Icons.Default.SearchOff, null, Modifier.size(64.dp), tint = Color.LightGray)
+                        Spacer(Modifier.height(16.dp))
+                        Text("Aucun résultat trouvé", style = MaterialTheme.typography.titleMedium, color = Color.Gray)
+                        Text("Essayez de modifier vos filtres", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+                        Spacer(Modifier.height(24.dp))
+                        Button(
+                             onClick = { 
+                                 searchQuery = ""
+                                 selectedLocation = null
+                                 selectedType = null
+                                 selectedTag = null
+                                 minSalary = 0
+                                 minDuration = 0
+                             },
+                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F))
+                        ) {
+                            Text("Tout effacer")
+                        }
+                    }
                 }
             }
         }
     }
     
-    // Modal de filtres avancés
-    if (showAdvancedFilters) {
-        AdvancedFiltersDialog(
-            locations = locations,
-            types = types,
-            tags = tags,
-            selectedLocation = selectedLocation,
-            selectedType = selectedType,
-            selectedTag = selectedTag,
-            minSalary = minSalary,
-            minDuration = minDuration,
-            onLocationChange = { selectedLocation = it },
-            onTypeChange = { selectedType = it },
-            onTagChange = { selectedTag = it },
-            onSalaryChange = { minSalary = it },
-            onDurationChange = { minDuration = it },
-            onReset = {
-                selectedLocation = null
-                selectedType = null
-                selectedTag = null
-                minSalary = 0
-                minDuration = 0
-            },
-            onDismiss = { showAdvancedFilters = false }
-        )
-    }
-}
-
-@Composable
-private fun RecommendedOfferCard(
-    offer: InternshipOffer,
-    onClick: () -> Unit
-) {
-    Card(
-        modifier = Modifier
-            .width(280.dp)
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        elevation = CardDefaults.cardElevation(2.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp)
+    // Bottom Sheet for Filters
+    if (showFilterSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showFilterSheet = false },
+            sheetState = sheetState,
+            containerColor = Color.White
         ) {
-            // Logo
-            offer.logoUrl?.let { logoUrl ->
-                val fullUrl = Constants.BASE_URL.removeSuffix("api/") + logoUrl.trimStart('/')
-                AsyncImage(
-                    model = fullUrl,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(120.dp)
-                        .clip(RoundedCornerShape(8.dp)),
-                    contentScale = ContentScale.Crop
-                )
-                Spacer(Modifier.height(8.dp))
-            }
-            
-            // Titre et entreprise
-            Text(
-                text = offer.title,
-                style = MaterialTheme.typography.titleSmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = offer.company,
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+            FilterSheetContent(
+                locations = locations,
+                types = types,
+                tags = tags,
+                selectedLocation = selectedLocation,
+                selectedType = selectedType,
+                selectedTag = selectedTag,
+                minSalary = minSalary,
+                minDuration = minDuration,
+                onApply = { loc, typ, tag, sal, dur ->
+                    selectedLocation = loc
+                    selectedType = typ
+                    selectedTag = tag
+                    minSalary = sal
+                    minDuration = dur
+                    scope.launch { sheetState.hide() }.invokeOnCompletion {
+                        if (!sheetState.isVisible) showFilterSheet = false
+                    }
+                },
+                onReset = {
+                    selectedLocation = null
+                    selectedType = null
+                    selectedTag = null
+                    minSalary = 0
+                    minDuration = 0
+                }
             )
         }
     }
 }
 
 @Composable
-private fun CompactInternshipItem(
-    offer: InternshipOffer,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(8.dp),
-        elevation = CardDefaults.cardElevation(1.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // Logo
-            offer.logoUrl?.let { logoUrl ->
-                val fullUrl = Constants.BASE_URL.removeSuffix("api/") + logoUrl.trimStart('/')
-                AsyncImage(
-                    model = fullUrl,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(60.dp)
-                        .clip(RoundedCornerShape(8.dp)),
-                    contentScale = ContentScale.Crop
-                )
-            } ?: Box(
-                modifier = Modifier
-                    .size(60.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFFE0E0E0))
-            )
-            
-            // Contenu
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = offer.title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    text = offer.company,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(Modifier.height(4.dp))
-                
-                // Localisation
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Person,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                        tint = Color.Gray
-                    )
-                    Text(
-                        text = offer.location ?: "Lieu inconnu",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray
-                    )
-                }
-                
-                Spacer(Modifier.height(4.dp))
-                
-                // Applications et places
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Person,
-                        contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                        tint = Color.Gray
-                    )
-                    Text(
-                        text = "${offer.applicationsCount ?: 0} # ${offer.positionsAvailable ?: 1} places",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray
-                    )
-                }
-            }
-            
-            // Flèche
-            Text(
-                text = "›",
-                style = MaterialTheme.typography.titleLarge,
-                color = Color.Gray,
-                modifier = Modifier.align(Alignment.CenterVertically)
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun AdvancedFiltersDialog(
+fun FilterSheetContent(
     locations: List<String>,
     types: List<String>,
     tags: List<String>,
@@ -665,287 +298,311 @@ private fun AdvancedFiltersDialog(
     selectedTag: String?,
     minSalary: Int,
     minDuration: Int,
-    onLocationChange: (String?) -> Unit,
-    onTypeChange: (String?) -> Unit,
-    onTagChange: (String?) -> Unit,
-    onSalaryChange: (Int) -> Unit,
-    onDurationChange: (Int) -> Unit,
-    onReset: () -> Unit,
-    onDismiss: () -> Unit
+    onApply: (String?, String?, String?, Int, Int) -> Unit,
+    onReset: () -> Unit
 ) {
-    var expandedLocation by remember { mutableStateOf(false) }
-    var expandedType by remember { mutableStateOf(false) }
-    var expandedTag by remember { mutableStateOf(false) }
-    
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+    // Local state for the sheet to allow modification before applying
+    var loc by remember { mutableStateOf(selectedLocation) }
+    var typ by remember { mutableStateOf(selectedType) }
+    var tag by remember { mutableStateOf(selectedTag) }
+    var sal by remember { mutableStateOf(minSalary) }
+    var dur by remember { mutableStateOf(minDuration) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp)
+            .padding(bottom = 32.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth(0.9f)
-                .fillMaxHeight(0.8f),
-            shape = RoundedCornerShape(16.dp)
+        // Header
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(
+            Text("Filtres", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            TextButton(onClick = {
+                loc = null; typ = null; tag = null; sal = 0; dur = 0
+                onReset()
+            }) {
+                Text("Réinitialiser", color = Color(0xFFD32F2F))
+            }
+        }
+        
+        // Sections
+        FilterSection("Localisation") {
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChipItem("Tous", loc == null) { loc = null }
+                locations.forEach { item ->
+                    FilterChipItem(item, loc == item) { loc = item }
+                }
+            }
+        }
+
+        FilterSection("Type de stage") {
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChipItem("Tous", typ == null) { typ = null }
+                types.forEach { item ->
+                    FilterChipItem(item, typ == item) { typ = item }
+                }
+            }
+        }
+        
+        FilterSection("Salaire Minimum: $sal DT") {
+            Slider(
+                value = sal.toFloat(),
+                onValueChange = { sal = it.toInt() },
+                valueRange = 0f..2000f,
+                steps = 19,
+                colors = SliderDefaults.colors(thumbColor = Color(0xFFD32F2F), activeTrackColor = Color(0xFFD32F2F))
+            )
+        }
+        
+        FilterSection("Durée Minimum: $dur semaines") {
+            Slider(
+                value = dur.toFloat(),
+                onValueChange = { dur = it.toInt() },
+                valueRange = 0f..26f,
+                steps = 12,
+                colors = SliderDefaults.colors(thumbColor = Color(0xFFD32F2F), activeTrackColor = Color(0xFFD32F2F))
+            )
+        }
+
+        Button(
+            onClick = { onApply(loc, typ, tag, sal, dur) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F)),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text("Afficher les résultats", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+fun SearchHeader(
+    searchQuery: String,
+    onSearchChange: (String) -> Unit,
+    onBack: () -> Unit,
+    onFilterClick: () -> Unit,
+    onMicClick: () -> Unit,
+    activeFiltersCount: Int
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White)
+            .padding(top = 48.dp, bottom = 16.dp, start = 16.dp, end = 16.dp)
+            .shadow(4.dp, RoundedCornerShape(0.dp), clip = false) // Removing clip to avoid cutting shadow
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.Default.ArrowBack, "Back", tint = Color.Black)
+            }
+            
+            // Search Bar Container
+            Row(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
+                    .weight(1f)
+                    .height(50.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(Color(0xFFF3F4F6))
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Header
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Icon(Icons.Default.Search, null, tint = Color.Gray)
+                Spacer(Modifier.width(8.dp))
+                androidx.compose.foundation.text.BasicTextField(
+                    value = searchQuery,
+                    onValueChange = onSearchChange,
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = Color.Black),
+                    decorationBox = { innerTextField ->
+                        if (searchQuery.isEmpty()) {
+                            Text("Rechercher...", color = Color.Gray)
+                        }
+                        innerTextField()
+                    }
+                )
+                if (searchQuery.isNotEmpty()) {
+                    IconButton(onClick = { onSearchChange("") }, modifier = Modifier.size(20.dp)) {
+                        Icon(Icons.Default.Close, "Clear", tint = Color.Gray)
+                    }
+                }
+            }
+            
+            Spacer(Modifier.width(8.dp))
+            
+            // Mic
+            IconButton(
+                onClick = onMicClick,
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFFF3F4F6))
+            ) {
+                Icon(Icons.Outlined.Mic, "Voice", tint = Color(0xFFD32F2F))
+            }
+            
+            Spacer(Modifier.width(8.dp))
+            
+            // Filter
+            Box {
+                IconButton(
+                    onClick = onFilterClick,
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFF3F4F6))
                 ) {
-                    TextButton(onClick = onReset) {
-                        Text("Réinitialiser")
+                    Icon(Icons.Outlined.FilterList, "Filter", tint = Color.Black)
+                }
+                if (activeFiltersCount > 0) {
+                    Badge(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .offset(x = (-4).dp, y = 4.dp),
+                        containerColor = Color(0xFFD32F2F)
+                    ) {
+                        Text(activeFiltersCount.toString(), color = Color.White)
                     }
-                    Text(
-                        text = "Filtres",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                    TextButton(onClick = onDismiss) {
-                        Text("OK", fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun FilterSection(title: String, content: @Composable () -> Unit) {
+    Column(Modifier.fillMaxWidth()) {
+        Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = Color(0xFF1F2937))
+        Spacer(Modifier.height(12.dp))
+        content()
+    }
+}
+
+@Composable
+fun FilterChipItem(text: String, selected: Boolean, onClick: () -> Unit) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(text) },
+        colors = FilterChipDefaults.filterChipColors(
+            selectedContainerColor = Color(0xFFFFEBEE),
+            selectedLabelColor = Color(0xFFD32F2F),
+            containerColor = Color(0xFFF3F4F6),
+            labelColor = Color(0xFF4B5563)
+        ),
+        border = FilterChipDefaults.filterChipBorder(
+            enabled = true,
+            selected = selected,
+            borderColor = if (selected) Color(0xFFD32F2F) else Color.Transparent,
+            selectedBorderColor = Color(0xFFD32F2F),
+            borderWidth = 1.dp
+        ),
+        enabled = true
+    )
+}
+
+@Composable
+fun QuickFilterChip(text: String, onRemove: () -> Unit) {
+    InputChip(
+        selected = true,
+        onClick = onRemove,
+        label = { Text(text) },
+        trailingIcon = { Icon(Icons.Default.Close, null, Modifier.size(16.dp)) },
+        enabled = true,
+        colors = InputChipDefaults.inputChipColors(
+            containerColor = Color(0xFFFFEBEE),
+            labelColor = Color(0xFFD32F2F),
+            trailingIconColor = Color(0xFFD32F2F)
+        ),
+        modifier = Modifier.padding(start = 8.dp)
+    )
+}
+
+@Composable
+fun MiniRecommendedCard(offer: InternshipOffer, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier
+            .width(260.dp)
+            .height(160.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Box(Modifier.fillMaxSize()) {
+            // Background Image (Blurred)
+            offer.logoUrl?.let { logoUrl ->
+                 val fullUrl = Constants.BASE_URL.removeSuffix("api/") + logoUrl.trimStart('/')
+                 AsyncImage(
+                    model = fullUrl,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize().alpha(0.1f),
+                    contentScale = ContentScale.Crop
+                )
+            }
+            
+            Column(Modifier.padding(12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Logo
+                     offer.logoUrl?.let { logoUrl ->
+                        val fullUrl = Constants.BASE_URL.removeSuffix("api/") + logoUrl.trimStart('/')
+                        AsyncImage(
+                            model = fullUrl,
+                            contentDescription = null,
+                            modifier = Modifier.size(40.dp).clip(RoundedCornerShape(8.dp)).background(Color.White),
+                            contentScale = ContentScale.Fit
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Column {
+                        Text(
+                            text = offer.company,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.Gray
+                        )
+                         Text(
+                            text = offer.locationAddress ?: "Tunis",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.LightGray
+                        )
                     }
                 }
                 
-                // Localisation
-                Column {
-                    Text(
-                        text = "Localisation",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    ExposedDropdownMenuBox(
-                        expanded = expandedLocation,
-                        onExpandedChange = { expandedLocation = !expandedLocation }
-                    ) {
-                        OutlinedTextField(
-                            value = selectedLocation ?: "Tous",
-                            onValueChange = {},
-                            readOnly = true,
-                            trailingIcon = {
-                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedLocation)
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .menuAnchor()
-                        )
-                        ExposedDropdownMenu(
-                            expanded = expandedLocation,
-                            onDismissRequest = { expandedLocation = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Tous") },
-                                onClick = {
-                                    onLocationChange(null)
-                                    expandedLocation = false
-                                }
-                            )
-                            locations.forEach { location ->
-                                DropdownMenuItem(
-                                    text = { Text(location) },
-                                    onClick = {
-                                        onLocationChange(location)
-                                        expandedLocation = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
+                Spacer(Modifier.weight(1f))
                 
-                // Type de stage
-                Column {
-                    Text(
-                        text = "Type de stage",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    ExposedDropdownMenuBox(
-                        expanded = expandedType,
-                        onExpandedChange = { expandedType = !expandedType }
-                    ) {
-                        OutlinedTextField(
-                            value = selectedType ?: "Tous",
-                            onValueChange = {},
-                            readOnly = true,
-                            trailingIcon = {
-                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedType)
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .menuAnchor()
-                        )
-                        ExposedDropdownMenu(
-                            expanded = expandedType,
-                            onDismissRequest = { expandedType = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Tous") },
-                                onClick = {
-                                    onTypeChange(null)
-                                    expandedType = false
-                                }
-                            )
-                            types.forEach { type ->
-                                DropdownMenuItem(
-                                    text = { Text(type) },
-                                    onClick = {
-                                        onTypeChange(type)
-                                        expandedType = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
+                Text(
+                    text = offer.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    color = Color(0xFF1F2937)
+                )
                 
-                // Tags
-                Column {
-                    Text(
-                        text = "Tags",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    ExposedDropdownMenuBox(
-                        expanded = expandedTag,
-                        onExpandedChange = { expandedTag = !expandedTag }
-                    ) {
-                        OutlinedTextField(
-                            value = selectedTag ?: "Tous",
-                            onValueChange = {},
-                            readOnly = true,
-                            trailingIcon = {
-                                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedTag)
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .menuAnchor()
-                        )
-                        ExposedDropdownMenu(
-                            expanded = expandedTag,
-                            onDismissRequest = { expandedTag = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Tous") },
-                                onClick = {
-                                    onTagChange(null)
-                                    expandedTag = false
-                                }
-                            )
-                            tags.forEach { tag ->
-                                DropdownMenuItem(
-                                    text = { Text(tag) },
-                                    onClick = {
-                                        onTagChange(tag)
-                                        expandedTag = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
+                Spacer(Modifier.height(8.dp))
                 
-                // Salaire minimum
-                Column {
+                // Mini Tag
+                 Surface(
+                    color = Color(0xFFFFEBEE),
+                    shape = RoundedCornerShape(4.dp)
+                ) {
                     Text(
-                        text = "Salaire minimum",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray,
-                        modifier = Modifier.padding(bottom = 8.dp)
+                        text = "${offer.duration} sem.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color(0xFFD32F2F),
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        OutlinedTextField(
-                            value = "$minSalary TND",
-                            onValueChange = {},
-                            readOnly = true,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(1.dp),
-                            modifier = Modifier.padding(start = 8.dp)
-                        ) {
-                            IconButton(
-                                onClick = { if (minSalary > 0) onSalaryChange(minSalary - 50) },
-                                modifier = Modifier
-                                    .background(
-                                        Color(0xFFE0E0E0),
-                                        RoundedCornerShape(topStart = 4.dp, bottomStart = 4.dp)
-                                    )
-                            ) {
-                                Text("-", style = MaterialTheme.typography.titleLarge)
-                            }
-                            IconButton(
-                                onClick = { onSalaryChange(minSalary + 50) },
-                                modifier = Modifier
-                                    .background(
-                                        Color(0xFFE0E0E0),
-                                        RoundedCornerShape(topEnd = 4.dp, bottomEnd = 4.dp)
-                                    )
-                            ) {
-                                Text("+", style = MaterialTheme.typography.titleLarge)
-                            }
-                        }
-                    }
-                }
-                
-                // Durée minimum
-                Column {
-                    Text(
-                        text = "Durée minimum",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.Gray,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        OutlinedTextField(
-                            value = "$minDuration semaines",
-                            onValueChange = {},
-                            readOnly = true,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(1.dp),
-                            modifier = Modifier.padding(start = 8.dp)
-                        ) {
-                            IconButton(
-                                onClick = { if (minDuration > 0) onDurationChange(minDuration - 1) },
-                                modifier = Modifier
-                                    .background(
-                                        Color(0xFFE0E0E0),
-                                        RoundedCornerShape(topStart = 4.dp, bottomStart = 4.dp)
-                                    )
-                            ) {
-                                Text("-", style = MaterialTheme.typography.titleLarge)
-                            }
-                            IconButton(
-                                onClick = { onDurationChange(minDuration + 1) },
-                                modifier = Modifier
-                                    .background(
-                                        Color(0xFFE0E0E0),
-                                        RoundedCornerShape(topEnd = 4.dp, bottomEnd = 4.dp)
-                                    )
-                            ) {
-                                Text("+", style = MaterialTheme.typography.titleLarge)
-                            }
-                        }
-                    }
                 }
             }
         }

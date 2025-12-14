@@ -40,7 +40,9 @@ class InternshipOfferRepository(
         title: String,
         company: String,
         description: String,
-        location: String?,
+        locationAddress: String?,
+        locationLatitude: Double?,
+        locationLongitude: Double?,
         duration: Int,
         salary: Int?,
         logoPart: MultipartBody.Part?,
@@ -60,8 +62,14 @@ class InternshipOfferRepository(
                 "duration" to duration.toString().toPart()
             )
 
-            if (!location.isNullOrBlank()) {
-                data["location"] = location.toPart()
+            if (!locationAddress.isNullOrBlank()) {
+                data["location"] = locationAddress.toPart()
+            }
+            if (locationLatitude != null) {
+                data["latitude"] = locationLatitude.toString().toPart()
+            }
+            if (locationLongitude != null) {
+                data["longitude"] = locationLongitude.toString().toPart()
             }
             if (salary != null) {
                 data["salary"] = salary.toString().toPart()
@@ -103,7 +111,9 @@ class InternshipOfferRepository(
         title: String,
         company: String,
         description: String,
-        location: String?,
+        locationAddress: String?,
+        locationLatitude: Double?,
+        locationLongitude: Double?,
         duration: Int,
         salary: Int?,
         logoPart: MultipartBody.Part?,
@@ -123,8 +133,14 @@ class InternshipOfferRepository(
                 "duration" to duration.toString().toPart()
             )
 
-            if (!location.isNullOrBlank()) {
-                data["location"] = location.toPart()
+            if (!locationAddress.isNullOrBlank()) {
+                data["location"] = locationAddress.toPart()
+            }
+            if (locationLatitude != null) {
+                data["latitude"] = locationLatitude.toString().toPart()
+            }
+            if (locationLongitude != null) {
+                data["longitude"] = locationLongitude.toString().toPart()
             }
             if (salary != null) {
                 data["salary"] = salary.toString().toPart()

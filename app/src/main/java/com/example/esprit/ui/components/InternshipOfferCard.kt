@@ -86,10 +86,10 @@ fun InternshipOfferCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (!offer.location.isNullOrBlank()) {
+                if (!offer.locationAddress.isNullOrBlank()) {
                     AssistChip(
                         onClick = {},
-                        label = { Text(offer.location!!) }
+                        label = { Text(offer.locationAddress!!) }
                     )
                 }
                 AssistChip(

@@ -91,5 +91,24 @@ class AdminApplicationsViewModel @Inject constructor(
             }
         }
     }
+    
+    fun deleteApplication(applicationId: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isUpdating = true, error = null)
+            when (val res = repository.deleteApplication(applicationId)) {
+                is Resource.Success -> {
+                    // Recharger la liste
+                    loadAllApplications()
+                }
+                is Resource.Error -> {
+                    _uiState.value = _uiState.value.copy(
+                        isUpdating = false,
+                        error = res.message
+                    )
+                }
+                else -> {}
+            }
+        }
+    }
 }
 

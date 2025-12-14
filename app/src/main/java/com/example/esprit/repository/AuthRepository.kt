@@ -19,4 +19,22 @@ class AuthRepository @Inject constructor(
 
     // token added by interceptor
     suspend fun me(): User = api.getMe()
+
+    suspend fun forgotPassword(email: String) {
+        api.forgotPassword(mapOf("email" to email))
+    }
+
+    suspend fun verifyCode(email: String, code: String) {
+        api.verifyCode(mapOf("email" to email, "code" to code))
+    }
+
+    suspend fun resetPassword(email: String, code: String, newPass: String) {
+        api.resetPassword(
+            mapOf(
+                "email" to email,
+                "code" to code,
+                "newPassword" to newPass
+            )
+        )
+    }
 }

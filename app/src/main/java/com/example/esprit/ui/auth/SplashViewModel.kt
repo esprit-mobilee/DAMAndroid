@@ -18,6 +18,16 @@ class SplashViewModel @Inject constructor(
 
     fun checkAuth(onResult: (Boolean, Role?) -> Unit) {
         viewModelScope.launch {
+            // Check Remember Me preference
+            val rememberMe = dataStore.getRememberMe()
+            
+            if (!rememberMe) {
+                // If user didn't check "Remember Me", clear token on startup
+                dataStore.clearToken()
+                onResult(false, null)
+                return@launch
+            }
+
             val token = dataStore.tokenFlow.first()
             if (token.isNullOrEmpty()) {
                 onResult(false, null)

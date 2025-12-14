@@ -68,7 +68,11 @@ fun AdminInternshipListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = onAddClick) {
+            FloatingActionButton(
+                onClick = onAddClick,
+                containerColor = Color(0xFFEF4444),
+                contentColor = Color.White
+            ) {
                 Icon(Icons.Default.Add, contentDescription = "Ajouter")
             }
         }
@@ -94,10 +98,29 @@ fun AdminInternshipListScreen(
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         items(uiState.offers) { offer ->
-                            InternshipOfferCard(
+                            var showDeleteDialog by remember { mutableStateOf(false) }
+
+                            if (showDeleteDialog) {
+                                AlertDialog(
+                                    onDismissRequest = { showDeleteDialog = false },
+                                    title = { Text("Supprimer l'offre") },
+                                    text = { Text("Êtes-vous sûr de vouloir supprimer cette offre de stage ?") },
+                                    confirmButton = {
+                                        TextButton(onClick = {
+                                            showDeleteDialog = false
+                                            offer.id?.let { viewModel.deleteOffer(it) }
+                                        }) { Text("Supprimer") }
+                                    },
+                                    dismissButton = {
+                                        TextButton(onClick = { showDeleteDialog = false }) { Text("Annuler") }
+                                    }
+                                )
+                            }
+
+                            com.example.esprit.ui.components.ModernInternshipCard(
                                 offer = offer,
                                 onClick = {
                                     offer.id?.let { id ->
@@ -106,142 +129,12 @@ fun AdminInternshipListScreen(
                                         navController.navigate(route)
                                     }
                                 },
-                                onEdit = { offer.id?.let { onEditClick(it) } },
-                                onDelete = { offer.id?.let { viewModel.deleteOffer(it) } }
+                                isAdmin = false  // Don't show edit/delete in list
                             )
                         }
                     }
                 }
             }
         }
-    }
-}
-
-/* ----------------------------------------------------------------------
-   Card – same style as EventCard, but clickable to details
-   ---------------------------------------------------------------------- */
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun InternshipOfferCard(
-    offer: InternshipOffer,
-    onClick: () -> Unit,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    var showDeleteDialog by remember { mutableStateOf(false) }
-
-    if (showDeleteDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Supprimer l'offre") },
-            text = { Text("Êtes-vous sûr de vouloir supprimer cette offre de stage ?") },
-            confirmButton = {
-                TextButton(onClick = {
-                    showDeleteDialog = false
-                    onDelete()
-                }) { Text("Supprimer") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Annuler") }
-            }
-        )
-    }
-
-    val fullLogoUrl = offer.logoUrl?.let { relative ->
-        Constants.BASE_URL
-            .removeSuffix("api/")
-            .plus(relative.trimStart('/'))
-    }
-
-    Card(
-        onClick = onClick,   // 👈 card clickable → details
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(3.dp)
-    ) {
-        Column(Modifier.padding(14.dp)) {
-
-            if (!fullLogoUrl.isNullOrBlank()) {
-                AsyncImage(
-                    model = fullLogoUrl,
-                    contentDescription = "Logo de l'entreprise",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(160.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFFE0E0E0)),
-                    contentScale = ContentScale.Crop
-                )
-                Spacer(Modifier.height(8.dp))
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        text = offer.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = offer.company,
-                        color = Color.Gray,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = offer.description,
-                        color = Color.DarkGray,
-                        maxLines = 3,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-
-                IconButton(onClick = onEdit) {
-                    Icon(Icons.Default.Edit, contentDescription = "Modifier")
-                }
-                IconButton(onClick = { showDeleteDialog = true }) {
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = "Supprimer",
-                        tint = Color.Red
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(10.dp))
-
-            Row {
-                Tag(offer.location ?: "Lieu inconnu")
-                Spacer(Modifier.width(6.dp))
-                Tag("${offer.duration} sem.")
-                offer.salary?.let {
-                    Spacer(Modifier.width(6.dp))
-                    Tag("$it DT")
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun Tag(text: String) {
-    Surface(
-        shape = RoundedCornerShape(50),
-        color = Color(0xFFF2F2F2)
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-            style = MaterialTheme.typography.bodySmall
-        )
     }
 }

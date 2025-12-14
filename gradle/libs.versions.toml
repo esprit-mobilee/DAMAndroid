@@ -30,6 +30,7 @@ androidx-compose-material3 = { group = "androidx.compose.material3", name = "mat
 androidx-benchmark-common = { group = "androidx.benchmark", name = "benchmark-common", version.ref = "benchmarkCommon" }
 identity-credential = { group = "com.android.identity", name = "identity-credential", version.ref = "identityCredential" }
 androidx-compose-animation = { group = "androidx.compose.animation", name = "animation", version.ref = "animation" }
+pdfbox-android = { group = "com.tom-roush", name = "pdfbox-android", version = "2.0.27.0" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

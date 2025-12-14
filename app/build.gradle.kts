@@ -118,6 +118,12 @@ dependencies {
     implementation("androidx.compose.material:material-icons-core:1.7.5")
     implementation("androidx.compose.material:material-icons-extended:1.7.5")
 
+    // OpenStreetMap (osmdroid)
+    implementation("org.osmdroid:osmdroid-android:6.1.18")
+
+    // PDFBox-Android
+    implementation(libs.pdfbox.android)
+
 }
 
 // enforce JavaPoet version in this module too
@@ -130,4 +136,9 @@ configurations.all {
         force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.22")
         force("org.jetbrains.kotlin:kotlin-reflect:1.9.22")
     }
+    
+    // Check for Duplicate class error (bcprov-jdk15on vs bcprov-jdk15to18)
+    // We force exclusion of the older one
+    exclude(group = "org.bouncycastle", module = "bcprov-jdk15on")
+    exclude(group = "org.bouncycastle", module = "bcpkix-jdk15on")
 }

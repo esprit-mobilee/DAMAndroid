@@ -16,7 +16,8 @@ data class ApplicationDetailUiState(
     val isLoading: Boolean = true,
     val application: Application? = null,
     val error: String? = null,
-    val userName: String? = null
+    val userName: String? = null,
+    val userEmail: String? = null
 )
 
 @HiltViewModel
@@ -34,12 +35,14 @@ class ApplicationDetailViewModel @Inject constructor(
             when (val res = repository.getApplicationById(applicationId)) {
                 is Resource.Success -> {
                     val application = res.data
-                    // Charger le nom de l'utilisateur
+                    // Charger le nom et l'email de l'utilisateur
                     var userName: String? = null
+                    var userEmail: String? = null
                     application?.userId?.let { userId ->
                         try {
                             val user = userRepository.getUserById(userId)
                             userName = user.fullName
+                            userEmail = user.email
                         } catch (e: Exception) {
                             userName = userId // Fallback sur l'ID si erreur
                         }
@@ -47,7 +50,8 @@ class ApplicationDetailViewModel @Inject constructor(
                     _uiState.value = ApplicationDetailUiState(
                         isLoading = false,
                         application = application,
-                        userName = userName
+                        userName = userName,
+                        userEmail = userEmail
                     )
                 }
                 is Resource.Error -> {

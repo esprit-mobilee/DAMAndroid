@@ -5,6 +5,7 @@ import com.example.esprit.model.ai.OpenAIChatRequest
 import com.example.esprit.model.ai.OpenAIChatResponse
 import com.example.esprit.model.ai.OpenAIError
 import com.example.esprit.model.ai.OpenAIMessage
+import com.example.esprit.model.AiProfile
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -117,6 +118,44 @@ object AIService {
         try {
             val prompt = "Résume cette description de stage en quelques points clés (3-4 lignes max) :\n\n$description"
             sendMessage(prompt)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Generate a student profile from CV text
+     * @param cvText Text extracted from CV PDF
+     * @return AiProfile object
+     */
+    suspend fun generateProfileFromCV(cvText: String): Result<AiProfile> = withContext(Dispatchers.IO) {
+        try {
+            val systemPrompt = """
+                Tu es un expert RH. Analyse le texte du CV suivant et extrais les informations pour créer un profil structuré.
+                Réponds UNIQUEMENT avec un JSON valide respectant ce format :
+                {
+                  "firstName": "Prénom du candidat",
+                  "lastName": "Nom de famille du candidat",
+                  "summary": "Court résumé professionnel du candidat (3-4 phrases)",
+                  "skills": ["Compétence 1", "Compétence 2", ...],
+                  "experience": ["Poste 1 chez Entreprise A (Dates)", "Poste 2..."],
+                  "education": ["Diplôme 1 - Ecole A", "Diplôme 2..."]
+                }
+                Si une info est manquante, laisse le champ vide ou tableau vide.
+            """.trimIndent()
+
+            val messages = listOf(
+                OpenAIMessage(role = "system", content = systemPrompt),
+                OpenAIMessage(role = "user", content = cvText)
+            )
+
+            val jsonResponse = makeApiCall(messages)
+            
+            // Clean markdown code blocks if present (```json ... ```)
+            val cleanJson = jsonResponse.replace(Regex("```json|```"), "").trim()
+            
+            val profile = gson.fromJson(cleanJson, AiProfile::class.java)
+            Result.success(profile)
         } catch (e: Exception) {
             Result.failure(e)
         }

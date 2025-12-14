@@ -1,41 +1,56 @@
 package com.example.esprit.ui.shared.internships
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.AttachFile
-import androidx.compose.material.icons.filled.AccessTime
-import androidx.compose.material.icons.filled.Label
-import androidx.compose.material.icons.filled.Work
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Label
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.example.esprit.model.InternshipOffer
 import com.example.esprit.repository.InternshipOfferRepository
@@ -45,10 +60,15 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import org.osmdroid.config.Configuration
+import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+import org.osmdroid.util.GeoPoint
+import org.osmdroid.views.MapView
+import org.osmdroid.views.overlay.Marker
 import javax.inject.Inject
 
 // ---------------------------------------------------------------------
-// UI STATE + DETAIL VIEWMODEL
+// UI STATE + DETAIL VIEWMODEL (UNCHANGED)
 // ---------------------------------------------------------------------
 
 data class InternshipDetailUiState(
@@ -63,8 +83,8 @@ class InternshipOfferDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    // "id" comes from the nav route internships/details/{id}
     private val offerId: String = savedStateHandle["id"] ?: ""
+    var shouldRefreshList = false
 
     private val _uiState = MutableStateFlow(InternshipDetailUiState(isLoading = true))
     val uiState: StateFlow<InternshipDetailUiState> = _uiState
@@ -73,22 +93,27 @@ class InternshipOfferDetailViewModel @Inject constructor(
         loadOffer()
     }
 
-    private fun loadOffer() {
+    fun loadOffer() {
         viewModelScope.launch {
             _uiState.value = InternshipDetailUiState(isLoading = true)
             when (val res = repository.getOfferById(offerId)) {
                 is Resource.Success ->
-                    _uiState.value = InternshipDetailUiState(
-                        isLoading = false,
-                        offer = res.data
-                    )
-
+                    _uiState.value = InternshipDetailUiState(isLoading = false, offer = res.data)
                 is Resource.Error ->
-                    _uiState.value = InternshipDetailUiState(
-                        isLoading = false,
-                        error = res.message
-                    )
+                    _uiState.value = InternshipDetailUiState(isLoading = false, error = res.message)
+                else -> {}
+            }
+        }
+    }
 
+    fun deleteOffer(onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isLoading = true)
+            when (val res = repository.deleteOffer(offerId)) {
+                is Resource.Success -> onSuccess()
+                is Resource.Error -> {
+                    _uiState.value = _uiState.value.copy(isLoading = false, error = res.message)
+                }
                 else -> {}
             }
         }
@@ -96,84 +121,308 @@ class InternshipOfferDetailViewModel @Inject constructor(
 }
 
 // ---------------------------------------------------------------------
-// DETAIL SCREEN
+// DETAIL SCREEN (REDESIGNED)
 // ---------------------------------------------------------------------
 
-@OptIn(ExperimentalMaterial3Api::class)
+object DetailColors {
+    val EspritRed = Color(0xFFD32F2F)
+    val DarkRed = Color(0xFFB71C1C)
+    val TextDark = Color(0xFF1F2937)
+    val TextGray = Color(0xFF6B7280)
+    val BgGray = Color(0xFFF9FAFB)
+    val SurfaceWhite = Color.White
+}
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun InternshipOfferDetailScreen(
+    navController: NavHostController,
     onBack: () -> Unit,
-    currentUserId: String,              // identifiant étudiant (ex: HT12345)
+    currentUserId: String,
     isAdmin: Boolean,
-    onApplyClick: ((String) -> Unit)? = null,  // Pour naviguer vers l'écran de postulation
-    onViewApplicationsClick: (() -> Unit)? = null,  // Pour naviguer vers les candidatures
+    onApplyClick: ((String) -> Unit)? = null,
+    onViewApplicationsClick: (() -> Unit)? = null,
+    onEditClick: ((String) -> Unit)? = null,
     viewModel: InternshipOfferDetailViewModel = hiltViewModel(),
     favoriteViewModel: FavoriteViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
     val favoriteState by favoriteViewModel.uiState.collectAsState()
-    
-    // Vérifier si c'est un favori quand l'offre est chargée
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
     LaunchedEffect(state.offer?.id) {
         if (!isAdmin && state.offer?.id != null) {
             favoriteViewModel.checkFavorite(state.offer!!.id!!)
         }
     }
 
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("Détails du stage") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Retour")
+    LaunchedEffect(navController) {
+        navController.currentBackStackEntry?.savedStateHandle?.getStateFlow("refreshInternships", false)
+            ?.collect { refresh ->
+                if (refresh) {
+                    viewModel.loadOffer()
+                    viewModel.shouldRefreshList = true
+                    navController.currentBackStackEntry?.savedStateHandle?.set("refreshInternships", false)
+                }
+            }
+    }
+
+    val handleBack = {
+        if (viewModel.shouldRefreshList) {
+            navController.previousBackStackEntry?.savedStateHandle?.set("refreshInternships", true)
+        }
+        onBack()
+    }
+
+    Box(modifier = Modifier.fillMaxSize().background(DetailColors.BgGray)) {
+        if (state.isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.align(Alignment.Center),
+                color = DetailColors.EspritRed
+            )
+        } else if (state.error != null) {
+            Text(
+                text = state.error ?: "Erreur",
+                modifier = Modifier.align(Alignment.Center),
+                color = MaterialTheme.colorScheme.error
+            )
+        } else if (state.offer != null) {
+            val offer = state.offer!!
+
+             // AI Summary State & Function
+            var isSummarizing by remember { mutableStateOf(false) }
+            var summaryText by remember { mutableStateOf<String?>(null) }
+            val coroutineScope = rememberCoroutineScope()
+
+            fun summarizeDescription() {
+                coroutineScope.launch {
+                    isSummarizing = true
+                    kotlinx.coroutines.delay(1500) 
+                    val description = offer.description
+                    val summary = if (description.length > 100) {
+                        description.take(150) + "..."
+                    } else {
+                        description
                     }
-                },
-                actions = {
-                    if (!isAdmin && state.offer?.id != null) {
-                        IconButton(
-                        onClick = {
-                            favoriteViewModel.toggleFavorite(state.offer!!.id!!)
+                    summaryText = "Résumé de la description : $summary"
+                    isSummarizing = false
+                }
+            }
+            
+            // --- HEADER HERO IMAGE ---
+            // Le header est fixe en haut, mais on scrollera par dessus avec la feuille (Sheet)
+            DetailHeroHeader(
+                offer = offer,
+                onBack = handleBack,
+                isAdmin = isAdmin,
+                isFavorite = favoriteState.isFavorite,
+                onToggleFavorite = { favoriteViewModel.toggleFavorite(offer.id!!) },
+                onEdit = { onEditClick?.invoke(offer.id!!) },
+                onDelete = { showDeleteDialog = true }
+            )
+
+            // --- SCROLLABLE SHEET ---
+            // Une colonne qui remplit l'écran mais avec un padding top pour laisser voir le header
+            // et un contenu sur fond blanc arrondi
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = 220.dp) // Leave space for header
+                    .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
+                    .background(Color.White)
+            ) {
+                // Content scrollable
+                Column(
+                    modifier = Modifier
+                        .weight(1f) // Take available space
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 24.dp, vertical = 32.dp)
+                ) {
+                    
+                    // Title Section inside Sheet
+                    Text(
+                        text = offer.title,
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = DetailColors.TextDark
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                         Icon(
+                            Icons.Default.LocationOn, 
+                            contentDescription = null, 
+                            tint = DetailColors.EspritRed,
+                            modifier = Modifier.size(18.dp)
+                         )
+                         Spacer(modifier = Modifier.width(4.dp))
+                         Text(
+                             text = offer.location?.address ?: "Lieu non spécifié",
+                             style = MaterialTheme.typography.bodyMedium,
+                             color = DetailColors.TextGray
+                         )
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // --- KEY DETAILS GRID ---
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        // Col 1
+                        Column(modifier = Modifier.weight(1f)) {
+                            InfoItem(Icons.Default.CalendarToday, "Début", formatDate(offer.startDate ?: ""))
+                            Spacer(modifier = Modifier.height(16.dp))
+                            InfoItem(Icons.Default.AttachMoney, "Salaire", if(offer.salary!=null && offer.salary > 0) "${offer.salary} DT" else "Non rémunéré")
                         }
+                        // Col 2
+                        Column(modifier = Modifier.weight(1f)) {
+                             InfoItem(Icons.Default.AccessTime, "Durée", "${offer.duration} semaines")
+                             Spacer(modifier = Modifier.height(16.dp))
+                             InfoItem(Icons.Default.Work, "Places", "${offer.positionsAvailable ?: 1} post(s)")
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    // --- DESCRIPTION ---
+                    SectionTitle("À propos du poste", onAiSummarize = { summarizeDescription() })
+                    
+                    
+                    // Integrated AI UI
+                    if (summaryText == null && !isSummarizing) {
+                         // Button is in the title row
+                    } else if (isSummarizing) {
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp), color = DetailColors.EspritRed)
+                    } else if (summaryText != null) {
+                         Card(
+                            colors = CardDefaults.cardColors(containerColor = DetailColors.EspritRed.copy(alpha = 0.05f)),
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
                         ) {
-                            Icon(
-                                imageVector = if (favoriteState.isFavorite) {
-                                    Icons.Default.Favorite
-                                } else {
-                                    Icons.Default.FavoriteBorder
-                                },
-                                contentDescription = "Ajouter aux favoris",
-                                tint = if (favoriteState.isFavorite) {
-                                    Color(0xFFD32F2F) // Rouge
-                                } else {
-                                    Color.Gray
-                                }
-                            )
+                            Row(Modifier.padding(12.dp)) {
+                                Icon(Icons.Default.AutoAwesome, null, tint = DetailColors.EspritRed)
+                                Spacer(Modifier.width(8.dp))
+                                Text(summaryText!!, style = MaterialTheme.typography.bodyMedium.copy(fontStyle = androidx.compose.ui.text.font.FontStyle.Italic))
+                            }
                         }
+                    }
+
+                    Text(
+                        text = offer.description,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = DetailColors.TextDark,
+                        lineHeight = 24.sp
+                    )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    // --- TAGS ---
+                    if (!offer.tags.isNullOrEmpty()) {
+                         SectionTitle("Compétences")
+                         FlowRow(
+                             modifier = Modifier.fillMaxWidth(),
+                             horizontalArrangement = Arrangement.spacedBy(8.dp),
+                             verticalArrangement = Arrangement.spacedBy(8.dp)
+                         ) {
+                             offer.tags.forEach { tag ->
+                                 Surface(
+                                     shape = RoundedCornerShape(8.dp),
+                                     color = DetailColors.EspritRed.copy(alpha = 0.1f),
+                                     border = androidx.compose.foundation.BorderStroke(1.dp, DetailColors.EspritRed.copy(alpha=0.2f))
+                                 ) {
+                                     Text(
+                                         text = tag,
+                                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                         color = DetailColors.EspritRed,
+                                         fontWeight = FontWeight.Medium,
+                                         style = MaterialTheme.typography.bodyMedium
+                                     )
+                                 }
+                             }
+                         }
+                         Spacer(modifier = Modifier.height(24.dp))
+                    }
+
+                    // --- MAP ---
+                    offer.location?.latitude?.let { lat ->
+                        offer.location?.longitude?.let { lon ->
+                            SectionTitle("Localisation")
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(180.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                elevation = CardDefaults.cardElevation(2.dp)
+                            ) {
+                                MapDisplay(lat, lon, offer.company)
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            val context = LocalContext.current
+                            OutlinedButton(
+                                onClick = { openInMaps(context, lat, lon, offer.company) },
+                                modifier = Modifier.fillMaxWidth(),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, DetailColors.EspritRed),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = DetailColors.EspritRed)
+                            ) {
+                                Icon(Icons.Default.Map, null, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text("Ouvrir dans Maps")
+                            }
+                             Spacer(modifier = Modifier.height(24.dp))
+                        }
+                    }
+                    
+                    Spacer(Modifier.height(80.dp)) // Padding bottom for floating buttons (if any) or existing bottom bar
+                }
+
+                // Sticky Bottom Actions
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shadowElevation = 16.dp,
+                    color = Color.White
+                ) {
+                    Column(Modifier.padding(16.dp)) {
+                         if (!isAdmin) {
+                             Button(
+                                 onClick = { onApplyClick?.invoke(offer.id!!) },
+                                 modifier = Modifier.fillMaxWidth().height(50.dp),
+                                 colors = ButtonDefaults.buttonColors(containerColor = DetailColors.EspritRed),
+                                 shape = RoundedCornerShape(12.dp)
+                             ) {
+                                 Text("Postuler maintenant", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                             }
+                             if (onViewApplicationsClick != null) {
+                                 Spacer(Modifier.height(8.dp))
+                                 TextButton(
+                                     onClick = onViewApplicationsClick,
+                                     modifier = Modifier.fillMaxWidth()
+                                 ) {
+                                     Text("Voir mes candidatures", color = DetailColors.EspritRed)
+                                 }
+                             }
+                         }
                     }
                 }
-            )
-        }
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize()
-        ) {
-            when {
-                state.isLoading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
-
-                state.error != null -> Text(
-                    text = state.error ?: "Erreur",
-                    modifier = Modifier.align(Alignment.Center)
-                )
-
-                state.offer != null -> InternshipDetailContent(
-                    offer = state.offer!!,
-                    currentUserId = currentUserId,
-                    isAdmin = isAdmin,
-                    onApplyClick = onApplyClick,
-                    onViewApplicationsClick = onViewApplicationsClick
+            }
+            
+            // Delete Dialog Overlay
+            if (showDeleteDialog) {
+                AlertDialog(
+                    onDismissRequest = { showDeleteDialog = false },
+                    title = { Text("Confirmer suppression") },
+                    text = { Text("Voulez-vous vraiment supprimer cette offre ?") },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                viewModel.deleteOffer {
+                                    navController.previousBackStackEntry?.savedStateHandle?.set("refreshInternships", true)
+                                    showDeleteDialog = false
+                                    onBack()
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+                        ) { Text("Supprimer") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showDeleteDialog = false }) { Text("Annuler") }
+                    }
                 )
             }
         }
@@ -181,577 +430,195 @@ fun InternshipOfferDetailScreen(
 }
 
 // ---------------------------------------------------------------------
-// CONTENT
+// COMPONENTS
 // ---------------------------------------------------------------------
 
 @Composable
-private fun InternshipDetailContent(
+fun DetailHeroHeader(
     offer: InternshipOffer,
-    currentUserId: String,
+    onBack: () -> Unit,
     isAdmin: Boolean,
-    onApplyClick: ((String) -> Unit)? = null,
-    onViewApplicationsClick: (() -> Unit)? = null,
-    applicationsViewModel: InternshipApplicationsViewModel = hiltViewModel()
+    isFavorite: Boolean,
+    onToggleFavorite: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
 ) {
     val fullLogoUrl = offer.logoUrl?.let { relative ->
-        Constants.BASE_URL
-            .removeSuffix("api/")
-            .plus(relative.trimStart('/'))
+        Constants.BASE_URL.removeSuffix("api/").plus(relative.trimStart('/'))
     }
 
-    // AI Summary State
-    var isSummarizing by remember { mutableStateOf(false) }
-    var summaryText by remember { mutableStateOf<String?>(null) }
-    val coroutineScope = rememberCoroutineScope()
-
-    // Mock AI Function
-    fun summarizeDescription() {
-        coroutineScope.launch {
-            isSummarizing = true
-            kotlinx.coroutines.delay(1500) // Simulate network delay
-            
-            // Simulation d'un résumé basé sur la description réelle
-            val description = offer.description
-            val summary = if (description.length > 100) {
-                // Prend les deux premières phrases ou les 150 premiers caractères
-                val sentences = description.split(Regex("(?<=[.!?])\\s+"))
-                if (sentences.size >= 2) {
-                    sentences.take(2).joinToString(" ")
-                } else {
-                    description.take(150) + "..."
-                }
-            } else {
-                description
-            }
-            
-            summaryText = "Résumé de la description : $summary"
-            isSummarizing = false
-        }
-    }
-
-    Column(
+    Box(
         modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+            .fillMaxWidth()
+            .height(260.dp) // Large Header
     ) {
+        // 1. Background Image (Blurred/Cover)
         if (!fullLogoUrl.isNullOrBlank()) {
-            AsyncImage(
+             AsyncImage(
                 model = fullLogoUrl,
-                contentDescription = "Logo",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color(0xFFE0E0E0)),
-                contentScale = ContentScale.Crop
-            )
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop,
+                alpha = 0.3f // Dimmed
+             )
         }
-
-        Text(
-            text = offer.title,
-            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
-        )
-        Text(
-            text = offer.company,
-            style = MaterialTheme.typography.titleMedium,
-            color = Color.Gray
-        )
-        
-        // Location if available
-        offer.location?.let { location ->
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.LocationOn,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = Color.Gray
-                )
-                Text(
-                    text = location,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
-                )
-            }
-        }
-
-        Spacer(Modifier.height(8.dp))
-        
-        // Description section with AI Summarize Icon
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(
-                text = "Description",
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold)
-            )
-            
-            IconButton(onClick = { summarizeDescription() }) {
-                if (isSummarizing) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.AutoAwesome,
-                        contentDescription = "Résumer avec l'IA",
-                        tint = MaterialTheme.colorScheme.primary
+        // Gradient Overlay
+        Box(
+            modifier = Modifier.fillMaxSize().background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        DetailColors.EspritRed.copy(alpha=0.8f),
+                        DetailColors.DarkRed
                     )
-                }
-            }
-        }
-        
-        Text(
-            text = offer.description,
-            style = MaterialTheme.typography.bodyMedium
+                )
+            )
         )
 
-        // Display Summary if available
-        AnimatedVisibility(visible = summaryText != null) {
-            summaryText?.let { summary ->
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
-                    ),
-                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                            Spacer(Modifier.width(8.dp))
-                            Text("Résumé IA", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                        }
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = summary,
-                            style = MaterialTheme.typography.bodyMedium.copy(fontStyle = androidx.compose.ui.text.font.FontStyle.Italic)
+        // 2. Navigation & Actions Row
+        Row(
+            modifier = Modifier
+                .statusBarsPadding()
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
+            }
+            Row {
+                if (isAdmin) {
+                    IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, "Edit", tint = Color.White) }
+                    IconButton(onClick = onDelete) { Icon(Icons.Default.Delete, "Delete", tint = Color.White) }
+                } else {
+                    IconButton(onClick = onToggleFavorite) {
+                        Icon(
+                            imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = "Favorite",
+                            tint = if (isFavorite) Color.White else Color.White.copy(alpha=0.7f)
                         )
                     }
                 }
             }
         }
 
-        Spacer(Modifier.height(16.dp))
-
-        // Detailed attributes list
-        DetailAttributeRow(
-            icon = Icons.Default.AccessTime,
-            label = "Durée",
-            value = "${offer.duration} semaines"
-        )
-        
-        offer.tags?.takeIf { it.isNotEmpty() }?.let { tags ->
-            DetailAttributeRow(
-                icon = Icons.Default.Label,
-                label = "Tags",
-                value = tags.joinToString(", ")
-            )
-        }
-        
-        offer.internshipType?.let { type ->
-            DetailAttributeRow(
-                icon = Icons.Default.Work,
-                label = "Type de stage",
-                value = type
-            )
-        }
-        
-        offer.procedure?.let { proc ->
-            DetailAttributeRow(
-                icon = Icons.Default.List,
-                label = "Procédure",
-                value = proc
-            )
-        }
-        
-        offer.interviewProcess?.let { process ->
-            DetailAttributeRow(
-                icon = Icons.Default.Person,
-                label = "Processus d'entretien",
-                value = process
-            )
-        }
-        
-        offer.startDate?.let { dateStr ->
-            DetailAttributeRow(
-                icon = Icons.Default.CalendarToday,
-                label = "Début",
-                value = formatDate(dateStr)
-            )
-        }
-        
-        offer.positionsAvailable?.let { positions ->
-            DetailAttributeRow(
-                icon = Icons.Default.Work,
-                label = "Places disponibles",
-                value = positions.toString()
-            )
-        }
-        
-        offer.applicationsCount?.let { count ->
-            DetailAttributeRow(
-                icon = Icons.Default.Person,
-                label = "Postulés",
-                value = count.toString()
-            )
-        }
-        
-        offer.interviewDetails?.let { details ->
-            Spacer(Modifier.height(8.dp))
+        // 3. Floating Logo & Company Name (Centered)
+        Column(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .offset(y = (-20).dp), // Slight lift
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = Color.White,
+                shadowElevation = 8.dp,
+                modifier = Modifier.size(90.dp)
+            ) {
+                 if (!fullLogoUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = fullLogoUrl,
+                        contentDescription = "Logo",
+                        modifier = Modifier.fillMaxSize().padding(12.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                 } else {
+                     Box(modifier = Modifier.fillMaxSize(), contentAlignment=Alignment.Center) {
+                         Text(
+                             text = offer.company.take(1).uppercase(), 
+                             fontSize=32.sp, 
+                             fontWeight=FontWeight.Bold, 
+                             color=DetailColors.EspritRed
+                         )
+                     }
+                 }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "Détails d'entretien",
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
-            )
-            Text(
-                text = details,
-                style = MaterialTheme.typography.bodySmall,
-                color = Color.Gray
-            )
-        }
-
-        Spacer(Modifier.height(24.dp))
-
-        val offerId = offer.id ?: ""
-
-        if (isAdmin) {
-            AdminApplicationsSection(
-                offerId = offerId,
-                viewModel = applicationsViewModel
-            )
-        } else {
-            StudentActionButtons(
-                offerId = offerId,
-                onApplyClick = { onApplyClick?.invoke(offerId) },
-                onViewApplicationsClick = onViewApplicationsClick
+                text = offer.company,
+                style = MaterialTheme.typography.titleLarge,
+                color = Color.White,
+                fontWeight = FontWeight.Bold
             )
         }
     }
 }
 
-// Detail Attribute Row Component
 @Composable
-private fun DetailAttributeRow(
-    icon: ImageVector,
-    label: String,
-    value: String
-) {
+fun InfoItem(icon: ImageVector, label: String, value: String) {
+    Row(verticalAlignment = Alignment.Top) {
+        Surface(
+            shape = RoundedCornerShape(8.dp),
+            color = DetailColors.EspritRed.copy(alpha = 0.1f),
+            modifier = Modifier.size(36.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(icon, null, tint = DetailColors.EspritRed, modifier = Modifier.size(18.dp))
+            }
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column {
+            Text(text = label, style = MaterialTheme.typography.bodySmall, color = DetailColors.TextGray)
+            Text(text = value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = DetailColors.TextDark)
+        }
+    }
+}
+
+@Composable
+fun SectionTitle(title: String, onAiSummarize: (() -> Unit)? = null) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = label,
-            modifier = Modifier.size(20.dp),
-            tint = Color.Gray
-        )
-        Text(
-            text = "$label : $value",
-            style = MaterialTheme.typography.bodyMedium
-        )
+        Text(text = title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = DetailColors.TextDark)
+        if (onAiSummarize != null) {
+            IconButton(onClick = onAiSummarize, modifier = Modifier.size(24.dp)) {
+                Icon(Icons.Default.AutoAwesome, "AI", tint = DetailColors.EspritRed)
+            }
+        }
     }
 }
 
-// Helper function to format date
+
+// --- MAP UTILS (Unchanged) ---
+
+@Composable
+fun MapDisplay(latitude: Double, longitude: Double, label: String) {
+    val context = LocalContext.current
+    AndroidView(
+        factory = { ctx ->
+            Configuration.getInstance().load(ctx, ctx.getSharedPreferences("osmdroid", Context.MODE_PRIVATE))
+            MapView(ctx).apply {
+                setTileSource(TileSourceFactory.MAPNIK)
+                setMultiTouchControls(true)
+                controller.setZoom(15.0)
+                controller.setCenter(GeoPoint(latitude, longitude))
+                val marker = Marker(this)
+                marker.position = GeoPoint(latitude, longitude)
+                marker.title = label
+                marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                overlays.add(marker)
+            }
+        },
+        modifier = Modifier.fillMaxSize()
+    )
+}
+
+fun openInMaps(context: Context, lat: Double, lon: Double, label: String) {
+    val uri = "geo:$lat,$lon?q=$lat,$lon($label)"
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(uri))
+    context.startActivity(intent)
+}
+
 private fun formatDate(dateStr: String): String {
     return try {
-        // Try to parse ISO date format
         val isoFormat = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.getDefault())
         val date = isoFormat.parse(dateStr)
         val displayFormat = java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.getDefault())
         date?.let { displayFormat.format(it) } ?: dateStr
     } catch (e: Exception) {
-        dateStr
-    }
-}
-
-// ---------------------------------------------------------------------
-// SECTION ÉTUDIANT : BOUTONS D'ACTION
-// ---------------------------------------------------------------------
-
-@Composable
-private fun StudentActionButtons(
-    offerId: String,
-    onApplyClick: () -> Unit,
-    onViewApplicationsClick: (() -> Unit)?
-) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        // Bouton Postuler
-        Button(
-            onClick = onApplyClick,
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFFD32F2F) // Rouge comme LinkedIn
-            )
-        ) {
-            Text(
-                text = "Postuler",
-                color = Color.White
-            )
-        }
-        
-        // Bouton Voir mes candidatures
-        onViewApplicationsClick?.let {
-            OutlinedButton(
-                onClick = it,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = Color(0xFFD32F2F)
-                )
-            ) {
-                Icon(
-                    imageVector = Icons.Default.AttachFile,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text("Voir mes candidatures")
-            }
-        }
-    }
-}
-
-// ---------------------------------------------------------------------
-// SECTION ÉTUDIANT : APPLIQUER (ancienne version - gardée pour référence)
-// ---------------------------------------------------------------------
-
-@Composable
-private fun StudentApplySection(
-    offerId: String,
-    currentUserId: String,
-    viewModel: InternshipApplicationsViewModel
-) {
-    val appsState by viewModel.uiState.collectAsState()
-
-    var cvUrl by remember { mutableStateOf("") }
-    var coverLetter by remember { mutableStateOf("") }
-    var cvError by remember { mutableStateOf<String?>(null) }
-
-    // Launcher pour choisir un PDF de CV
-    val cvPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri ->
-        uri?.let {
-            cvUrl = it.toString()
-            cvError = null
-        }
-    }
-
-    // Launcher pour un PDF de lettre de motivation (optionnel)
-    val letterPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri ->
-        uri?.let {
-            coverLetter = it.toString()
-        }
-    }
-
-    Column(
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Text(
-            text = "Postuler à ce stage",
-            style = MaterialTheme.typography.titleMedium
-        )
-
-        // ----- CV -----
-        OutlinedTextField(
-            value = cvUrl,
-            onValueChange = {
-                cvUrl = it
-                cvError = null
-            },
-            label = { Text("Lien ou fichier CV") },
-            isError = cvError != null,
-            modifier = Modifier.fillMaxWidth(),
-            trailingIcon = {
-                IconButton(onClick = { cvPickerLauncher.launch("application/pdf") }) {
-                    Icon(
-                        imageVector = Icons.Default.AttachFile,
-                        contentDescription = "Joindre un CV (PDF)"
-                    )
-                }
-            },
-            supportingText = {
-                cvError?.let {
-                    Text(
-                        text = it,
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-            }
-        )
-
-        // ----- Lettre de motivation -----
-        OutlinedTextField(
-            value = coverLetter,
-            onValueChange = { coverLetter = it },
-            label = { Text("Lettre de motivation (texte ou lien / fichier)") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = 80.dp),
-            trailingIcon = {
-                IconButton(onClick = { letterPickerLauncher.launch("application/pdf") }) {
-                    Icon(
-                        imageVector = Icons.Default.AttachFile,
-                        contentDescription = "Joindre une lettre (PDF)"
-                    )
-                }
-            }
-        )
-
-        Button(
-            onClick = {
-                if (cvUrl.isBlank()) {
-                    cvError = "Le CV est obligatoire (lien ou fichier)"
-                    return@Button
-                }
-
-                viewModel.apply(
-                    userId = currentUserId,
-                    internshipId = offerId,
-                    cvUrl = cvUrl,
-                    coverLetter = coverLetter.ifBlank { null }
-                )
-            },
-            enabled = !appsState.isApplying,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(if (appsState.isApplying) "Envoi..." else "Postuler")
-        }
-
-        appsState.applyError?.let {
-            Text(
-                text = it,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall
-            )
-        }
-
-        if (appsState.applySuccess) {
-            Text(
-                text = "Votre candidature a été envoyée.",
-                color = Color(0xFF2E7D32),
-                style = MaterialTheme.typography.bodySmall
-            )
-        }
-    }
-}
-
-// ---------------------------------------------------------------------
-// SECTION ADMIN : LISTE DES CANDIDATURES
-// ---------------------------------------------------------------------
-
-@Composable
-private fun AdminApplicationsSection(
-    offerId: String,
-    viewModel: InternshipApplicationsViewModel
-) {
-    val state by viewModel.uiState.collectAsState()
-
-    LaunchedEffect(offerId) {
-        viewModel.loadForInternship(offerId)
-    }
-
-    Column(
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Text(
-            text = "Candidatures",
-            style = MaterialTheme.typography.titleMedium
-        )
-
-        when {
-            state.isLoading -> {
-                CircularProgressIndicator()
-            }
-
-            state.error != null -> {
-                Text(
-                    text = state.error ?: "Erreur lors du chargement des candidatures",
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-
-            state.applications.isEmpty() -> {
-                Text(
-                    text = "Aucune candidature pour l'instant.",
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-
-            else -> {
-                state.applications.forEach { app ->
-                    ApplicationRow(
-                        applicantText = app.userId ?: "Étudiant inconnu",
-                        cvUrl = app.cvUrl,
-                        status = app.status,
-                        onAccept = {
-                            app.id?.let { id ->
-                                viewModel.changeStatusForAdmin(
-                                    applicationId = id,
-                                    internshipId = offerId,
-                                    newStatus = "accepted"
-                                )
-                            }
-                        },
-                        onReject = {
-                            app.id?.let { id ->
-                                viewModel.changeStatusForAdmin(
-                                    applicationId = id,
-                                    internshipId = offerId,
-                                    newStatus = "rejected"
-                                )
-                            }
-                        }
-                    )
-                    Spacer(Modifier.height(6.dp))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ApplicationRow(
-    applicantText: String,
-    cvUrl: String?,
-    status: String?,
-    onAccept: () -> Unit,
-    onReject: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFFF7F7F7), RoundedCornerShape(12.dp))
-            .padding(10.dp)
-    ) {
-        Text(
-            text = applicantText,
-            style = MaterialTheme.typography.bodyMedium
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = "CV : ${cvUrl ?: "Non disponible"}",
-            style = MaterialTheme.typography.bodySmall
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = "Statut : ${status ?: "pending"}",
-            style = MaterialTheme.typography.bodySmall
-        )
+         if(dateStr.length >= 10) dateStr.take(10) else dateStr
     }
 }
 

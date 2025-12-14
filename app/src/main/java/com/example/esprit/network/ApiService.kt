@@ -200,6 +200,13 @@ interface ApiService {
         @PartMap data: Map<String, @JvmSuppressWildcards RequestBody>
     ): Application
 
+    // Planifier un entretien
+    @POST("applications/{id}/schedule-interview")
+    suspend fun scheduleInterview(
+        @Path("id") applicationId: String,
+        @Body body: Map<String, @JvmSuppressWildcards Any>
+    ): Application
+
     // ==================================================
     // FAVORIS (/api/favorites)
     // ==================================================
@@ -221,4 +228,22 @@ interface ApiService {
         @Path("internshipId") internshipId: String,
         @Path("userId") userId: String
     ): Favorite?
+
+    // ==================================================
+    // FORGOT PASSWORD
+    // ==================================================
+    @POST("auth/forgot-password")
+    suspend fun forgotPassword(
+        @Body body: Map<String, String>
+    ): Map<String, String>
+
+    @POST("auth/verify-code")
+    suspend fun verifyCode(
+        @Body body: Map<String, String>
+    ): Map<String, String>
+
+    @POST("auth/reset-password")
+    suspend fun resetPassword(
+        @Body body: Map<String, String>
+    ): Map<String, String>
 }

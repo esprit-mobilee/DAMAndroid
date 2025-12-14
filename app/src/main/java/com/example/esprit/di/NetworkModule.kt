@@ -60,14 +60,25 @@ object NetworkModule {
             .addInterceptor(authInterceptorAsInterceptor)
             .build()
 
+    // 🔧 Gson with custom deserializers
+    @Provides
+    @Singleton
+    fun provideGson(): com.google.gson.Gson =
+        com.google.gson.GsonBuilder()
+            .registerTypeAdapter(
+                com.example.esprit.model.Application::class.java,
+                com.example.esprit.model.ApplicationDeserializer()
+            )
+            .create()
+
     // 🌐 Retrofit instance
     @Provides
     @Singleton
-    fun provideRetrofit(client: OkHttpClient): Retrofit =
+    fun provideRetrofit(client: OkHttpClient, gson: com.google.gson.Gson): Retrofit =
         Retrofit.Builder()
             .baseUrl(Constants.BASE_URL) // e.g. "http://10.0.2.2:3000/api/"
             .client(client)
-            .addConverterFactory(GsonConverterFactory.create())
+            .addConverterFactory(GsonConverterFactory.create(gson))
             .build()
 
     // 🚀 ApiService interface implementation

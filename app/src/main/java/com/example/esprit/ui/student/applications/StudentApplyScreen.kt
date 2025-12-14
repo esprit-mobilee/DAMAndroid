@@ -158,7 +158,7 @@ fun StudentApplyScreen(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !state.isApplying,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFF0077B5) // Bleu LinkedIn
+                    containerColor = Color(0xFFEF4444) // Rouge
                 )
             ) {
                 if (state.isApplying) {

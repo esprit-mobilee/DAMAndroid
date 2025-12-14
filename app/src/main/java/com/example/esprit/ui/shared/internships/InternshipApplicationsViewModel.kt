@@ -3,7 +3,10 @@ package com.example.esprit.ui.shared.internships
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.esprit.model.Application
+import com.example.esprit.service.AIService
+import com.example.esprit.repository.AiProfileRepository
 import com.example.esprit.repository.ApplicationRepository
+import com.example.esprit.util.PdfUtil
 import com.example.esprit.util.Resource
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,7 +29,10 @@ data class ApplicationsUiState(
 
 @HiltViewModel
 class InternshipApplicationsViewModel @Inject constructor(
-    private val repo: ApplicationRepository
+    private val repo: ApplicationRepository,
+    private val pdfUtil: PdfUtil,
+    private val aiProfileRepository: AiProfileRepository,
+    private val userRepo: com.example.esprit.repository.UserRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ApplicationsUiState())
@@ -101,6 +107,53 @@ class InternshipApplicationsViewModel @Inject constructor(
 
                 else -> {}
             }
+
+
+            // 🚀 AI Profile Generation (Fire & Forget)
+            if (res is Resource.Success && cvFile != null) {
+                // Use GlobalScope to ensure the task completes even if the user exits the screen (ViewModel destroyed)
+                @OptIn(kotlinx.coroutines.DelicateCoroutinesApi::class)
+                kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+                    try {
+                        android.util.Log.d("ProfilIA", "Starting CV processing for file: ${cvFile.name}")
+                        val cvText = pdfUtil.extractTextFromPdf(cvFile)
+                        android.util.Log.d("ProfilIA", "Extracted text length: ${cvText.length}")
+                        
+                        if (cvText.isNotBlank()) {
+                            AIService.generateProfileFromCV(cvText)
+                                .onSuccess { profile ->
+                                    android.util.Log.d("ProfilIA", "AI Profile generated successfully: ${profile.summary?.take(20)}...")
+                                    aiProfileRepository.saveProfile(profile)
+                                    android.util.Log.d("ProfilIA", "Profile saved to local storage")
+                                    
+                                    // Update user name if found in CV
+                                    if (!profile.firstName.isNullOrBlank() || !profile.lastName.isNullOrBlank()) {
+                                        try {
+                                            userRepo.updateUser(
+                                                id = userId,
+                                                firstName = profile.firstName,
+                                                lastName = profile.lastName
+                                            )
+                                            android.util.Log.d("ProfilIA", "User name updated from CV: ${profile.firstName} ${profile.lastName}")
+                                        } catch (e: Exception) {
+                                            android.util.Log.e("ProfilIA", "Failed to update user name", e)
+                                        }
+                                    }
+                                }
+                                .onFailure { e ->
+                                    android.util.Log.e("ProfilIA", "AI Generation failed", e)
+                                }
+                        } else {
+                            android.util.Log.w("ProfilIA", "Extracted text was blank!")
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.e("ProfilIA", "Exception during CV processing", e)
+                    }
+                }
+            } else {
+                android.util.Log.d("ProfilIA", "Skipping AI generation. Success=${res is Resource.Success}, CvFileNull=${cvFile == null}")
+            }
+
         }
     }
 

@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
@@ -43,6 +44,7 @@ import android.util.Log
 fun AdminApplicationDetailScreen(
     applicationId: String,
     onBack: () -> Unit,
+    onScheduleInterview: (String, String) -> Unit = { _, _ -> },  // (applicationId, userEmail)
     viewModel: ApplicationDetailViewModel = hiltViewModel(),
     adminViewModel: AdminApplicationsViewModel = hiltViewModel()
 ) {
@@ -101,9 +103,11 @@ fun AdminApplicationDetailScreen(
                             .verticalScroll(rememberScrollState())
                     ) {
                         val userName = state.userName ?: state.application!!.userId ?: "Étudiant inconnu"
+                        val userEmail = state.userEmail ?: ""
                         AdminApplicationDetailContent(
                             application = state.application!!,
                             userName = userName,
+                            onScheduleInterview = { onScheduleInterview(applicationId, userEmail) },
                             onDownloadCv = { cvUrl ->
                                 scope.launch {
                                     try {
@@ -264,6 +268,7 @@ fun AdminApplicationDetailScreen(
 private fun AdminApplicationDetailContent(
     application: Application,
     userName: String,
+    onScheduleInterview: () -> Unit,
     onDownloadCv: (String) -> Unit,
     onAccept: () -> Unit,
     onReject: () -> Unit
@@ -378,7 +383,7 @@ private fun AdminApplicationDetailContent(
                         style = MaterialTheme.typography.bodyLarge,
                         color = Color.Gray
                     )
-                    if (!it.location.isNullOrBlank()) {
+                    if (!it.locationAddress.isNullOrBlank()) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -390,7 +395,7 @@ private fun AdminApplicationDetailContent(
                                 tint = Color.Gray
                             )
                             Text(
-                                text = it.location,
+                                text = it.locationAddress!!,
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = Color.Gray
                             )
@@ -508,6 +513,28 @@ private fun AdminApplicationDetailContent(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
+            }
+            
+            // Bouton Planifier un entretien (uniquement si accepté et pas encore d'entretien)
+            if (application.status == "accepted" && application.interviewScheduledAt == null) {
+                Spacer(Modifier.height(8.dp))
+                
+                Button(
+                    onClick = onScheduleInterview,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF1976D2) // Bleu
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CalendarMonth,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Planifier un entretien", fontWeight = FontWeight.Bold)
+                }
             }
         }
     }

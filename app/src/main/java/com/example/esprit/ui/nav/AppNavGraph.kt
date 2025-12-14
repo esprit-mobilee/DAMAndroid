@@ -45,6 +45,7 @@ import com.example.esprit.ui.teacher.TeacherHomeScreen
 import com.example.esprit.ui.vieetudiante.*
 import com.example.esprit.ui.admin.applications.AdminApplicationsListScreen
 import com.example.esprit.ui.admin.applications.AdminApplicationDetailScreen
+import com.example.esprit.ui.admin.applications.ScheduleInterviewScreen
 import com.example.esprit.ui.student.ai.AIChatScreen
 import com.example.esprit.ui.student.ai.ChatHistoryScreen
 import com.example.esprit.service.ChatHistoryManager
@@ -120,10 +121,23 @@ fun AppNavGraph(
         // ----------------------------------------------------------
         // LOGIN
         // ----------------------------------------------------------
+        // ----------------------------------------------------------
+        // LOGIN
+        // ----------------------------------------------------------
         composable(Destinations.LOGIN) {
-            LoginScreen(viewModel = loginViewModel) { role ->
-                navController.navigate(roleToRoute(role)) { popUpTo(0) }
-            }
+            LoginScreen(
+                viewModel = loginViewModel,
+                onLoginSuccess = { role ->
+                    navController.navigate(roleToRoute(role)) { popUpTo(0) }
+                },
+                onForgotPasswordClick = {
+                    navController.navigate(Destinations.FORGOT_PASSWORD)
+                }
+            )
+        }
+        
+        composable(Destinations.FORGOT_PASSWORD) {
+            com.example.esprit.ui.auth.ForgotPasswordScreen(onBackComp = { navController.popBackStack() })
         }
 
         // ----------------------------------------------------------
@@ -371,6 +385,7 @@ fun AppNavGraph(
                         previousRoute?.startsWith(Destinations.ADMIN_HOME) == true
 
             InternshipOfferDetailScreen(
+                navController = navController,
                 onBack = { navController.popBackStack() },
                 currentUserId = currentUserId,
                 isAdmin = isAdmin,
@@ -380,6 +395,10 @@ fun AppNavGraph(
                 } else null,
                 onViewApplicationsClick = if (!isAdmin) {
                     { navController.navigate(Destinations.STUDENT_APPLICATIONS) }
+                } else null,
+                onEditClick = if (isAdmin) { id ->
+                    val route = Destinations.ADMIN_INTERNSHIP_EDIT.replace("{id}", id)
+                    navController.navigate(route)
                 } else null
             )
         }
@@ -412,6 +431,16 @@ fun AppNavGraph(
         
         composable(Destinations.STUDENT_SEARCH) {
             StudentSearchScreen(
+                onBack = { navController.popBackStack() },
+                onOfferClick = { id ->
+                    val route = Destinations.INTERNSHIP_DETAILS.replace("{id}", id)
+                    navController.navigate(route)
+                }
+            )
+        }
+        
+        composable(Destinations.STUDENT_FAVORITES) {
+            StudentFavoritesScreen(
                 onBack = { navController.popBackStack() },
                 onOfferClick = { id ->
                     val route = Destinations.INTERNSHIP_DETAILS.replace("{id}", id)
@@ -507,6 +536,33 @@ fun AppNavGraph(
             
             AdminApplicationDetailScreen(
                 applicationId = applicationId,
+                onBack = { navController.popBackStack() },
+                onScheduleInterview = { appId, userEmail ->
+                    val route = Destinations.SCHEDULE_INTERVIEW
+                        .replace("{id}", appId)
+                        .plus("?email=$userEmail")
+                    navController.navigate(route)
+                }
+            )
+        }
+
+        // Schedule Interview Screen
+        composable(
+            route = Destinations.SCHEDULE_INTERVIEW + "?email={email}",
+            arguments = listOf(
+                navArgument("id") { type = NavType.StringType },
+                navArgument("email") { 
+                    type = NavType.StringType
+                    defaultValue = ""
+                }
+            )
+        ) { backStackEntry ->
+            val applicationId = backStackEntry.arguments?.getString("id") ?: ""
+            val studentEmail = backStackEntry.arguments?.getString("email") ?: ""
+            
+            ScheduleInterviewScreen(
+                applicationId = applicationId,
+                studentEmail = studentEmail,
                 onBack = { navController.popBackStack() }
             )
         }

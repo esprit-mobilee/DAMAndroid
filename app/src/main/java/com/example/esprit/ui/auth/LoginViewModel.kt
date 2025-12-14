@@ -26,7 +26,7 @@ class LoginViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState
 
-    fun login(identifier: String, password: String, onLoginSuccess: (Role) -> Unit) {
+    fun login(identifier: String, password: String, rememberMe: Boolean, onLoginSuccess: (Role) -> Unit) {
         viewModelScope.launch {
             _uiState.value = LoginUiState(isLoading = true)
 
@@ -37,10 +37,13 @@ class LoginViewModel @Inject constructor(
                 // 2. login -> token
                 val authRes = repo.login(identifier, password)
 
-                // 3. store token if repo doesn't already do it
+                // 3. store token
                 dataStore.saveToken(authRes.accessToken)
+                
+                // 4. store remember preference
+                dataStore.saveRememberMe(rememberMe)
 
-                // 4. get /auth/me to know roles
+                // 5. get /auth/me to know roles
                 val me = repo.me()
 
                 val finalRole = pickBestRole(

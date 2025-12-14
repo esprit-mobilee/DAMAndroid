@@ -15,6 +15,7 @@ val Context.dataStore by preferencesDataStore(Constants.DATASTORE_NAME)
 class DataStoreManager(private val context: Context) {
 
     private val tokenKey = stringPreferencesKey(Constants.KEY_TOKEN)
+    private val rememberMeKey = androidx.datastore.preferences.core.booleanPreferencesKey("remember_me")
     private val favoritesKey = stringSetPreferencesKey("favorite_internships")
 
     // observe token as Flow (for UI / ViewModel)
@@ -39,6 +40,23 @@ class DataStoreManager(private val context: Context) {
     // ✅ this is what your AuthInterceptor needs
     suspend fun getToken(): String? {
         return tokenFlow.first()
+    }
+
+    // ==================================================
+    // REMEMBER ME
+    // ==================================================
+    val rememberMeFlow: Flow<Boolean> = context.dataStore.data.map { prefs ->
+        prefs[rememberMeKey] ?: false
+    }
+
+    suspend fun saveRememberMe(remember: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[rememberMeKey] = remember
+        }
+    }
+
+    suspend fun getRememberMe(): Boolean {
+        return rememberMeFlow.first()
     }
     
     // ==================================================

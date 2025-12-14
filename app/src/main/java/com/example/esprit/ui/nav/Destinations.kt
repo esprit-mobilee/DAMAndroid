@@ -42,8 +42,12 @@ object Destinations {
     // Admin Applications
     const val ADMIN_APPLICATIONS_LIST = "admin/applications"
     const val ADMIN_APPLICATION_DETAILS = "admin/applications/{id}"
+    const val SCHEDULE_INTERVIEW = "admin/applications/{id}/schedule_interview"
 
     // AI Chat Assistant
     const val AI_CHAT = "student/ai_chat"
     const val AI_CHAT_HISTORY = "student/ai_chat/history"
+    
+    // Auth
+    const val FORGOT_PASSWORD = "auth/forgot_password"
 }

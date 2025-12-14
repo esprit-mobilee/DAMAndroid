@@ -25,7 +25,7 @@ import com.example.esprit.model.InternshipOffer
 import com.example.esprit.repository.FavoriteRepository
 import com.example.esprit.repository.InternshipOfferRepository
 import com.example.esprit.util.Resource
-import com.example.esprit.ui.student.internships.StudentInternshipCard
+import com.example.esprit.ui.components.ModernInternshipCard
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -150,14 +150,15 @@ fun StudentFavoritesScreen(
                 
                 else -> {
                     LazyColumn(
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         items(uiState.offers) { offer ->
-                            StudentInternshipCard(
+                            ModernInternshipCard(
                                 offer = offer,
                                 onClick = {
                                     offer.id?.let { onOfferClick(it) }
-                                }
+                                },
+                                isAdmin = false
                             )
                         }
                     }
