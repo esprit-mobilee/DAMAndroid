@@ -56,7 +56,18 @@ object Destinations {
     const val STUDENT_APPLICATION_DETAILS = "student/applications/{id}"
     const val STUDENT_APPLICATION_EDIT = "student/applications/{id}/edit"
     const val STUDENT_FAVORITES = "student/internships/favorites"
+
     const val STUDENT_SEARCH = "student/internships/search"
+
+    // Document Requests (Demandes)
+    const val DOCUMENT_REQUEST_LIST = "student/document_requests"
+    const val DOCUMENT_REQUEST_CREATE = "student/document_requests/create"
+    const val DOCUMENT_REQUEST_DETAIL = "student/document_requests/detail/{id}"
+
+    // Admin Document Requests
+    const val ADMIN_DOCUMENT_REQUESTS_LIST = "admin/document_requests"
+    const val ADMIN_DOCUMENT_REQUEST_DETAIL = "admin/document_requests/detail/{id}"
+
 
     const val FORGOT_PASSWORD = "forgot_password"
 

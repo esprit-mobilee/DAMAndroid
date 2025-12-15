@@ -65,6 +65,11 @@ import com.example.esprit.ui.club.screens.EditClubEventScreen
 import com.example.esprit.ui.club.screens.EventDetailScreen
 import com.example.esprit.ui.club.screens.MembersListScreen
 import com.example.esprit.ui.club.screens.NotificationsScreen
+import com.example.esprit.ui.demande.DocumentRequestListScreen
+import com.example.esprit.ui.demande.DocumentRequestScreen
+import com.example.esprit.ui.demande.DocumentRequestDetailScreen
+import com.example.esprit.ui.admin.requests.AdminDocumentRequestListScreen
+import com.example.esprit.ui.admin.requests.AdminDocumentRequestDetailScreen
 
 @EntryPoint
 @InstallIn(SingletonComponent::class)
@@ -161,16 +166,74 @@ fun AppNavGraph(
             StudentHomeScreen(
                 onNavigateTimetable = { navController.navigate(Destinations.TIMETABLE) },
                 onNavigateAbsences = { navController.navigate(Destinations.ABSENCES) },
-                onNavigateAnnouncements = { navController.navigate(Destinations.ANNOUNCEMENTS) },
+                onNavigateAnnouncements = {
+                    navController.navigate(Destinations.ANNOUNCEMENTS)
+                },
                 onNavigateProfile = { navController.navigate(Destinations.PROFILE) },
                 onNavigateClubs = { navController.navigate(Destinations.STUDENT_CLUBS) },
                 onNavigateMessages = { navController.navigate(Destinations.MESSAGES) },
-                onNavigateStages = { navController.navigate(Destinations.STUDENT_INTERNSHIP_LIST) },
+                onNavigateStages = {
+                    navController.navigate(Destinations.STUDENT_INTERNSHIP_LIST)
+                },
                 onNavigateAIChat = { navController.navigate(Destinations.AI_CHAT) },
                 onNavigateClubChat = { clubId ->
                     navController.navigate(Destinations.clubChatRoute(clubId, "Chat"))
                 },
+                onNavigateDocumentRequests = {
+                    navController.navigate(Destinations.DOCUMENT_REQUEST_LIST)
+                },
                 onLogout = { handleLogout() }
+            )
+        }
+
+        // ----------------------------------------------------------
+        // DOCUMENT REQUESTS
+        // ----------------------------------------------------------
+        composable(Destinations.DOCUMENT_REQUEST_LIST) {
+            DocumentRequestListScreen(
+                onBack = { navController.popBackStack() },
+                onCreateRequest = {
+                    navController.navigate(Destinations.DOCUMENT_REQUEST_CREATE)
+                },
+                onRequestClick = { requestId ->
+                    val route = Destinations.DOCUMENT_REQUEST_DETAIL.replace("{id}", requestId)
+                    navController.navigate(route)
+                }
+            )
+        }
+
+        composable(Destinations.DOCUMENT_REQUEST_CREATE) {
+            DocumentRequestScreen(
+                onBack = { navController.popBackStack() },
+                onOpenHistory = {
+                    // Just go back to list, assuming it's in the backstack
+                    if (navController.previousBackStackEntry?.destination?.route == Destinations.DOCUMENT_REQUEST_LIST) {
+                        navController.popBackStack()
+                    } else {
+                        navController.navigate(Destinations.DOCUMENT_REQUEST_LIST) {
+                            popUpTo(Destinations.STUDENT_HOME)
+                        }
+                    }
+                }
+            )
+        }
+
+        composable(
+            route = Destinations.DOCUMENT_REQUEST_DETAIL,
+            arguments = listOf(navArgument("id") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val requestId = backStackEntry.arguments?.getString("id") ?: ""
+            DocumentRequestDetailScreen(
+                requestId = requestId,
+                onBack = { navController.popBackStack() },
+                // onViewFile could be handled via a WebView or external intent, 
+                // but for now let's leave it as a placeholder or handle if needed
+                onViewFile = { url ->
+                    // Handle file viewing
+                    // For example, open in browser
+                     val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                     context.startActivity(intent)
+                }
             )
         }
 
@@ -205,6 +268,9 @@ fun AppNavGraph(
                 },
                 onNavigateApplications = {
                     navController.navigate(Destinations.ADMIN_APPLICATIONS_LIST)
+                },
+                onNavigateDocumentRequests = {
+                    navController.navigate(Destinations.ADMIN_DOCUMENT_REQUESTS_LIST)
                 },
                 onLogout = { handleLogout() }
             )
@@ -679,6 +745,32 @@ fun AppNavGraph(
             ScheduleInterviewScreen(
                 applicationId = applicationId,
                 studentEmail = studentEmail,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+
+
+        // ----------------------------------------------------------
+        // ADMIN DOCUMENT REQUESTS
+        // ----------------------------------------------------------
+        composable(Destinations.ADMIN_DOCUMENT_REQUESTS_LIST) {
+            AdminDocumentRequestListScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToDetail = { id ->
+                    val route = Destinations.ADMIN_DOCUMENT_REQUEST_DETAIL.replace("{id}", id)
+                    navController.navigate(route)
+                }
+            )
+        }
+
+        composable(
+            route = Destinations.ADMIN_DOCUMENT_REQUEST_DETAIL,
+            arguments = listOf(navArgument("id") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val requestId = backStackEntry.arguments?.getString("id") ?: ""
+            AdminDocumentRequestDetailScreen(
+                requestId = requestId,
                 onBack = { navController.popBackStack() }
             )
         }

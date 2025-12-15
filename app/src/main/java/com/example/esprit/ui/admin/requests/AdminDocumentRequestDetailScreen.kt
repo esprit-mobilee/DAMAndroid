@@ -28,9 +28,14 @@ import com.example.esprit.ui.components.StatusBadge
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminDocumentRequestDetailScreen(
+    requestId: String,
     viewModel: AdminDocumentRequestViewModel = hiltViewModel(),
     onBack: () -> Unit
 ) {
+    LaunchedEffect(requestId) {
+        viewModel.loadRequest(requestId)
+    }
+
     val uiState by viewModel.uiState.collectAsState()
     val request = uiState.selectedRequest
     val snackbarHostState = remember { SnackbarHostState() }

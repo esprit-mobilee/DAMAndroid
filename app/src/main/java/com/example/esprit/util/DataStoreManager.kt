@@ -101,4 +101,28 @@ class DataStoreManager(private val context: Context) {
             prefs.remove(favoritesKey)
         }
     }
+
+    // ==================================================
+    // PDF URI MANAGEMENT (for document generation)
+    // ==================================================
+    suspend fun savePdfUri(requestId: String, uri: String) {
+        val key = stringPreferencesKey("pdf_uri_$requestId")
+        context.dataStore.edit { prefs ->
+            prefs[key] = uri
+        }
+    }
+
+    suspend fun getPdfUri(requestId: String): String? {
+        val key = stringPreferencesKey("pdf_uri_$requestId")
+        return context.dataStore.data.map { prefs ->
+            prefs[key]
+        }.first()
+    }
+
+    suspend fun clearPdfUri(requestId: String) {
+        val key = stringPreferencesKey("pdf_uri_$requestId")
+        context.dataStore.edit { prefs ->
+            prefs.remove(key)
+        }
+    }
 }

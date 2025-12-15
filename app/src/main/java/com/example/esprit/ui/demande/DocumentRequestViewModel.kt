@@ -120,7 +120,7 @@ class DocumentRequestViewModel @Inject constructor(
                     details = details
                 )
 
-                val response: DocumentRequestCreateResponse = repository.createRequest(token, payload)
+                val response: DocumentRequestCreateResponse = repository.createRequest(payload)
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -158,7 +158,7 @@ class DocumentRequestViewModel @Inject constructor(
             }
             _uiState.update { it.copy(isLoading = true, error = null, successMessage = null) }
             try {
-                val response = repository.getFormFields(token, type)
+                val response = repository.getFormFields(type)
                 val defaultValues = response.fields.associate { field ->
                     field.name to when (field.name) {
                         "annee" -> _uiState.value.annee

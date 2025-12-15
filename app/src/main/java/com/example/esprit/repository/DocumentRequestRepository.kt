@@ -10,50 +10,48 @@ class DocumentRequestRepository @Inject constructor(
     private val api: ApiService
 ) {
 
-    suspend fun getFormFields(token: String, type: String) =
-        api.getDocumentFormFields(type, "Bearer $token")
+    suspend fun getFormFields(type: String) =
+        api.getDocumentFormFields(type)
 
-    suspend fun createRequest(token: String, payload: CreateDocumentRequestPayload) =
-        api.createDocumentRequest(payload, "Bearer $token")
+    suspend fun createRequest(payload: CreateDocumentRequestPayload) =
+        api.createDocumentRequest(payload)
 
-    suspend fun getRequests(token: String) =
-        api.getDocumentRequests("Bearer $token")
+    suspend fun getRequests() =
+        api.getDocumentRequests()
 
-    suspend fun getStats(token: String) =
-        api.getDocumentRequestStats("Bearer $token")
+    suspend fun getStats() =
+        api.getDocumentRequestStats()
 
-    suspend fun getFiles(token: String) =
-        api.getDocumentFiles("Bearer $token")
+    suspend fun getFiles() =
+        api.getDocumentFiles()
 
-    suspend fun deleteRequest(token: String, id: String) =
-        api.deleteDocumentRequest("Bearer $token", id)
+    suspend fun deleteRequest(id: String) =
+        api.deleteDocumentRequest(id)
 
-    suspend fun getRequestById(token: String, id: String) =
-        api.getDocumentRequestById(id, "Bearer $token")
+    suspend fun getRequestById(id: String) =
+        api.getDocumentRequestById(id)
 
-    suspend fun getRequestFile(token: String, requestId: String) =
-        api.getDocumentRequestFile(requestId, "Bearer $token")
+    suspend fun getRequestFile(requestId: String) =
+        api.getDocumentRequestFile(requestId)
 
-    suspend fun updateStatus(token: String, id: String, status: String, reason: String? = null) =
+    suspend fun updateStatus(id: String, status: String, reason: String? = null) =
         api.updateDocumentRequestStatus(
             id,
             mapOf("status" to status).let {
                 if (reason != null) it + ("rejectionReason" to reason) else it
-            },
-            "Bearer $token"
+            }
         )
 
-    suspend fun uploadFile(token: String, id: String, filePart: okhttp3.MultipartBody.Part) =
-        api.uploadDocumentRequestFile(id, filePart, "Bearer $token")
+    suspend fun uploadFile(id: String, filePart: okhttp3.MultipartBody.Part) =
+        api.uploadDocumentRequestFile(id, filePart)
 
-    suspend fun updateReference(token: String, id: String, reference: String, hash: String) =
+    suspend fun updateReference(id: String, reference: String, hash: String) =
         api.updateDocumentReference(
             id,
             mapOf(
                 "documentReference" to reference,
                 "verificationHash" to hash
-            ),
-            "Bearer $token"
+            )
         )
 }
 

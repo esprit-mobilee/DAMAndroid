@@ -59,7 +59,7 @@ class DocumentRequestDetailViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 Log.d("DetailVM", "Calling repository.getRequestById")
-                val request = repository.getRequestById(token, id)
+                val request = repository.getRequestById(id)
                 Log.d("DetailVM", "Request loaded successfully: ${request.id}, type: ${request.type}")
                 _uiState.update { 
                     it.copy(
@@ -99,11 +99,11 @@ class DocumentRequestDetailViewModel @Inject constructor(
                 
                 // Try the specific endpoint first
                 val file = try {
-                    repository.getRequestFile(token, requestId)
+                    repository.getRequestFile(requestId)
                 } catch (e: Exception) {
                     Log.d("DetailVM", "Specific endpoint failed, trying files list: ${e.message}")
                     // If specific endpoint fails, try to find in files list
-                    val allFiles = repository.getFiles(token)
+                    val allFiles = repository.getFiles()
                     Log.d("DetailVM", "Found ${allFiles.size} files in list")
                     
                     // Try to find by documentRequestId first
@@ -153,7 +153,7 @@ class DocumentRequestDetailViewModel @Inject constructor(
             }
             _uiState.update { it.copy(isDeleting = true, deleteError = null) }
             try {
-                repository.deleteRequest(token, id)
+                repository.deleteRequest(id)
                 _uiState.update { 
                     it.copy(
                         isDeleting = false,
@@ -228,7 +228,6 @@ class DocumentRequestDetailViewModel @Inject constructor(
                            if (token.isNotBlank()) {
                                Log.d("DetailVM", "Saving document reference to backend: ${signatureData.documentReference}")
                                repository.updateReference(
-                                   token, 
                                    request.id, 
                                    signatureData.documentReference, 
                                    signatureData.verificationHash

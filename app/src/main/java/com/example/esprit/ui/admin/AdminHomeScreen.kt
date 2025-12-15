@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Work
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -48,7 +49,8 @@ fun AdminHomeScreen(
     onNavigateProfile: () -> Unit = {},
     onNavigateVieEtudiante: () -> Unit = {},
     onNavigateStages: () -> Unit = {},
-    onNavigateApplications: () -> Unit = {}
+    onNavigateApplications: () -> Unit = {},
+    onNavigateDocumentRequests: () -> Unit = {}
 ) {
     val drawerState = rememberDrawerState(initialValue = androidx.compose.material3.DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -217,6 +219,20 @@ fun AdminHomeScreen(
                         }
                     ) {
                         onNavigateApplications()
+                    }
+
+                    ActionGridItem(
+                        label = "Demandes docs",
+                        icon = {
+                            Icon(
+                                Icons.Default.Description,
+                                contentDescription = null,
+                                tint = Color(0xFFD32F2F),
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                    ) {
+                        onNavigateDocumentRequests()
                     }
                 }
             }

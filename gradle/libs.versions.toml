@@ -1,6 +1,6 @@
 [versions]
 agp = "8.13.0"
-kotlin = "1.9.22"
+kotlin = "2.0.21"
 coreKtx = "1.17.0"
 junit = "4.13.2"
 junitVersion = "1.3.0"
@@ -35,5 +35,5 @@ pdfbox-android = { group = "com.tom-roush", name = "pdfbox-android", version = "
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
-# Note: kotlin-compose plugin removed - using Compose Compiler integrated in AGP for Kotlin 1.9.x
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 

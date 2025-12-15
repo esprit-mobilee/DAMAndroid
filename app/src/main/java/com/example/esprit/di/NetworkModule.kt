@@ -58,6 +58,9 @@ object NetworkModule {
         OkHttpClient.Builder()
             .addInterceptor(logging)
             .addInterceptor(authInterceptorAsInterceptor)
+            .connectTimeout(90, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(90, java.util.concurrent.TimeUnit.SECONDS)
+            .writeTimeout(90, java.util.concurrent.TimeUnit.SECONDS)
             .build()
 
     // 🔧 Gson with custom deserializers

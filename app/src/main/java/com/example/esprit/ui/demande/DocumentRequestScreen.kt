@@ -64,7 +64,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.esprit.connect.ui.theme.EspritTheme
+import com.example.esprit.ui.theme.EspritTheme
 import com.example.esprit.model.DocumentField
 import com.example.esprit.model.DocumentRequestItem
 import com.example.esprit.service.SmartMessage

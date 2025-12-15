@@ -40,7 +40,9 @@ class ForgotPasswordViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             
             try {
-                repo.forgotPassword(email)
+                android.util.Log.d("ForgotPassVM", "Sending code to: $email")
+                val response = repo.forgotPassword(email)
+                android.util.Log.d("ForgotPassVM", "Send code success: $response")
                 
                 _uiState.value = _uiState.value.copy(
                     isLoading = false,
@@ -49,6 +51,10 @@ class ForgotPasswordViewModel @Inject constructor(
                     message = "Un code de vérification a été envoyé à $email"
                 )
             } catch (e: Exception) {
+                 android.util.Log.e("ForgotPassVM", "Send code error", e)
+                 if (e is retrofit2.HttpException) {
+                     android.util.Log.e("ForgotPassVM", "HTTP ${e.code()} Body: ${e.response()?.errorBody()?.string()}")
+                 }
                  _uiState.value = _uiState.value.copy(
                     isLoading = false,
                     error = e.message ?: "Erreur d'envoi"

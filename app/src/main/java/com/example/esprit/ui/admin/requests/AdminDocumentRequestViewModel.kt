@@ -55,7 +55,7 @@ class AdminDocumentRequestViewModel @Inject constructor(
 
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
-                val requests = repository.getRequests(token)
+                val requests = repository.getRequests()
                 _uiState.update { it.copy(isLoading = false, requests = requests) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = e.localizedMessage) }
@@ -76,7 +76,7 @@ class AdminDocumentRequestViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 android.util.Log.d("AdminVM", "Calling repository.getRequestById...")
-                val request = repository.getRequestById(token, id)
+                val request = repository.getRequestById(id)
                 android.util.Log.d("AdminVM", "Request loaded successfully: ${request.id}")
                 _uiState.update { it.copy(isLoading = false, selectedRequest = request) }
             } catch (e: Exception) {
@@ -98,7 +98,7 @@ class AdminDocumentRequestViewModel @Inject constructor(
             _uiState.update { it.copy(isLoadingHistory = true) }
             try {
                 // Charger toutes les demandes et filtrer par userId
-                val allRequests = repository.getRequests(token)
+                val allRequests = repository.getRequests()
                 val studentRequests = allRequests.filter { it.user?.id == userId }
                     .sortedByDescending { it.createdAt } // Plus récentes en premier
                 
@@ -123,7 +123,7 @@ class AdminDocumentRequestViewModel @Inject constructor(
                 android.util.Log.d("AdminVM", "Updating status to $status for request $id")
                 android.util.Log.d("AdminVM", "Rejection reason: ${reason ?: "N/A"}")
                 
-                repository.updateStatus(token, id, status, reason)
+                repository.updateStatus(id, status, reason)
                 
                 android.util.Log.d("AdminVM", "Status updated successfully")
                 _uiState.update { 
@@ -165,7 +165,7 @@ class AdminDocumentRequestViewModel @Inject constructor(
                 val requestFile = file.asRequestBody("application/pdf".toMediaTypeOrNull())
                 val body = MultipartBody.Part.createFormData("file", file.name, requestFile)
 
-                repository.uploadFile(token, id, body)
+                repository.uploadFile(id, body)
                 
                 _uiState.update { 
                     it.copy(
@@ -299,7 +299,6 @@ class AdminDocumentRequestViewModel @Inject constructor(
                 // Update backend with signature data first
                 try {
                      repository.updateReference(
-                         token, 
                          request.id, 
                          signatureData.documentReference, 
                          signatureData.verificationHash
@@ -320,7 +319,7 @@ class AdminDocumentRequestViewModel @Inject constructor(
                 val requestFile = outputFile.asRequestBody("application/pdf".toMediaTypeOrNull())
                 val body = MultipartBody.Part.createFormData("file", outputFile.name, requestFile)
 
-                repository.uploadFile(token, request.id, body)
+                repository.uploadFile(request.id, body)
                 
                 _uiState.update { 
                     it.copy(

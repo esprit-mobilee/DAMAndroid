@@ -43,11 +43,17 @@ class ScheduleInterviewViewModel @Inject constructor(
                     "notes" to notes
                 )
                 
-                apiService.scheduleInterview(applicationId, body)
+                android.util.Log.d("InterviewVM", "Scheduling interview: $body")
+                val response = apiService.scheduleInterview(applicationId, body)
+                android.util.Log.d("InterviewVM", "Schedule success: $response")
                 
                 _uiState.value = ScheduleInterviewUiState(success = true)
                 onSuccess()
             } catch (e: Exception) {
+                android.util.Log.e("InterviewVM", "Schedule error", e)
+                if (e is retrofit2.HttpException) {
+                    android.util.Log.e("InterviewVM", "HTTP ${e.code()} Body: ${e.response()?.errorBody()?.string()}")
+                }
                 _uiState.value = ScheduleInterviewUiState(
                     error = e.message ?: "Erreur lors de la planification de l'entretien"
                 )

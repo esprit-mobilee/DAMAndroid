@@ -1,8 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    // Note: kotlin-compose plugin removed for Kotlin 1.9.x compatibility
-    // Compose Compiler is configured via composeOptions below
+    // Kotlin Compose plugin for Kotlin 2.0+
+    alias(libs.plugins.kotlin.compose)
 
     // for annotation processing
     id("kotlin-kapt")
@@ -49,9 +49,7 @@ android {
         compose = true
         buildConfig = true  // Enable BuildConfig for API key
     }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.8"
-    }
+    // composeOptions removed - configured by kotlin-compose plugin automatically
     
     // Fix kapt dependency on R.jar
     kapt {
@@ -100,9 +98,9 @@ dependencies {
     // OkHttp logging
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
 
-    // Hilt (compatible with Kotlin 1.9.x)
-    implementation("com.google.dagger:hilt-android:2.48")
-    kapt("com.google.dagger:hilt-android-compiler:2.48")
+    // Hilt (compatible with Kotlin 2.0.21)
+    implementation("com.google.dagger:hilt-android:2.57.2")
+    kapt("com.google.dagger:hilt-android-compiler:2.57.2")
 
 
     // Hilt navigation compose
@@ -124,6 +122,9 @@ dependencies {
     // PDFBox-Android
     implementation(libs.pdfbox.android)
 
+    // ZXing for QR codes
+    implementation("com.google.zxing:core:3.5.3")
+
     // Socket.IO
     implementation("io.socket:socket.io-client:2.1.0") {
         exclude(group = "org.json", module = "json")
@@ -135,11 +136,11 @@ dependencies {
 configurations.all {
     resolutionStrategy {
         force("com.squareup:javapoet:1.13.0")
-        // Force all Kotlin dependencies to use version 1.9.22 for compatibility with kapt
-        force("org.jetbrains.kotlin:kotlin-stdlib:1.9.22")
-        force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.22")
-        force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.22")
-        force("org.jetbrains.kotlin:kotlin-reflect:1.9.22")
+        // Force all Kotlin dependencies to use version 2.0.21 for compatibility
+        force("org.jetbrains.kotlin:kotlin-stdlib:2.0.21")
+        force("org.jetbrains.kotlin:kotlin-stdlib-jdk7:2.0.21")
+        force("org.jetbrains.kotlin:kotlin-stdlib-jdk8:2.0.21")
+        force("org.jetbrains.kotlin:kotlin-reflect:2.0.21")
     }
     
     // Check for Duplicate class error (bcprov-jdk15on vs bcprov-jdk15to18)

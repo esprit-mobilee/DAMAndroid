@@ -9,7 +9,7 @@ import okhttp3.RequestBody
 import retrofit2.http.*
 import com.example.esprit.model.Application
 
-interface ApiService {
+interface   ApiService {
 
     // --------------------------------------------------
     // AUTH  (/api/auth/...)
@@ -430,4 +430,61 @@ interface ApiService {
     suspend fun resetPassword(
         @Body body: Map<String, String>
     ): Map<String, String>
+
+
+
+    // ---------- DOCUMENT REQUESTS ----------
+    @GET("document-request/form-fields/{type}")
+    suspend fun getDocumentFormFields(
+        @Path("type") type: String
+    ): DocumentFormFieldsResponse
+
+    @POST("document-request")
+    suspend fun createDocumentRequest(
+        @Body body: CreateDocumentRequestPayload
+    ): DocumentRequestCreateResponse
+
+    @GET("document-request")
+    suspend fun getDocumentRequests(): List<DocumentRequestItem>
+
+    @GET("document-request/stats")
+    suspend fun getDocumentRequestStats(): DocumentRequestStats
+
+    @GET("document-request/files")
+    suspend fun getDocumentFiles(): List<DocumentFileItem>
+
+    @DELETE("document-request/{id}")
+    suspend fun deleteDocumentRequest(
+        @Path("id") id: String
+    ): Map<String, String>
+
+    @GET("document-request/request/{id}")
+    suspend fun getDocumentRequestById(
+        @Path("id") id: String
+    ): DocumentRequestItem
+
+    @GET("document-request/request/{requestId}/file")
+    suspend fun getDocumentRequestFile(
+        @Path("requestId") requestId: String
+    ): DocumentFileItem
+
+    @PATCH("document-request/{id}/status")
+    suspend fun updateDocumentRequestStatus(
+        @Path("id") id: String,
+        @Body body: Map<String, String> // { status, rejectionReason }
+    ): DocumentRequestItem
+
+    @retrofit2.http.Multipart
+    @POST("document-request/{id}/file")
+    suspend fun uploadDocumentRequestFile(
+        @Path("id") id: String,
+        @retrofit2.http.Part file: okhttp3.MultipartBody.Part
+    ): DocumentRequestItem
+    @PATCH("document-request/{id}")
+    suspend fun updateDocumentReference(
+        @Path("id") id: String,
+        @Body body: Map<String, String> // { documentReference, verificationHash }
+    ): DocumentRequestItem
 }
+
+

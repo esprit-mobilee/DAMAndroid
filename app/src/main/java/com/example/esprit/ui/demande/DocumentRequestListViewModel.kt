@@ -62,10 +62,10 @@ class DocumentRequestListViewModel @Inject constructor(
             }
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
-                val requests = repository.getRequests(token)
+                val requests = repository.getRequests()
                 // Try to load files in parallel
                 val files = try {
-                    repository.getFiles(token)
+                    repository.getFiles()
                 } catch (e: Exception) {
                     emptyList<DocumentFileItem>()
                 }
@@ -98,7 +98,7 @@ class DocumentRequestListViewModel @Inject constructor(
             }
             _uiState.update { it.copy(isDeleting = true, deleteError = null) }
             try {
-                repository.deleteRequest(token, id)
+                repository.deleteRequest(id)
                 _uiState.update { state ->
                     state.copy(
                         isDeleting = false,

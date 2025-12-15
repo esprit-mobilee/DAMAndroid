@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -45,6 +46,7 @@ fun StudentHomeScreen(
     onNavigateClubs: () -> Unit,
     onNavigateMessages: () -> Unit,
     onNavigateClubChat: (String) -> Unit, // New callback
+    onNavigateDocumentRequests: () -> Unit, // New callback for document requests
     onLogout: () -> Unit,
     profileViewModel: ProfileViewModel = hiltViewModel()
 ) {
@@ -105,6 +107,16 @@ fun StudentHomeScreen(
                         onClick = {
                             scope.launch { drawerState.close() }
                             onNavigateTimetable()
+                        }
+                    )
+                )
+                add(
+                    DrawerDestination(
+                        label = "Demandes Documents",
+                        icon = { Icon(Icons.Default.PictureAsPdf, null) },
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                            onNavigateDocumentRequests()
                         }
                     )
                 )
@@ -217,16 +229,17 @@ fun StudentHomeScreen(
                     ) { /* TODO */ }
                     
                     ActionGridItem(
-                        label = "Résultats",
+                        label = "Demande Document",
                         icon = {
                             Icon(
-                                Icons.Default.Person,
+                                Icons.Default.PictureAsPdf,
                                 contentDescription = null,
                                 tint = Color(0xFFD32F2F),
                                 modifier = Modifier.size(28.dp)
                             )
-                        }
-                    ) { /* TODO */ }
+                        },
+                        onClick = onNavigateDocumentRequests
+                    )
 
                     ActionGridItem(
                         label = "Stages",
