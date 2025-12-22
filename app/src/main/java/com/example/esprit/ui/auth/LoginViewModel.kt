@@ -28,34 +28,33 @@ class LoginViewModel @Inject constructor(
     fun login(identifier: String, password: String, onSuccess: (Role) -> Unit) {
         viewModelScope.launch {
             _uiState.value = LoginUiState(isLoading = true)
+
             try {
-                // 1) appel backend
                 val res = repo.login(identifier, password)
 
-                // 2) on sauvegarde le token
+                // SAVE TOKEN
                 dataStore.saveToken(res.accessToken)
 
-                // 3) sécuriser le champ role (peut être null ou vide)
-                val backendRole = res.role?.uppercase() ?: "STUDENT"
+                // SAVE USER ID
+                dataStore.saveUserId(res.user.id)
+                println("🔥 Saved userId = ${res.user.id}")
 
-                val role = when (backendRole) {
+                // Role
+                val role = when (res.user.role.uppercase()) {
                     "STUDENT" -> Role.STUDENT
                     "TEACHER" -> Role.TEACHER
-                    "PARENT"  -> Role.PARENT
-                    "ADMIN"   -> Role.ADMIN
-                    else      -> Role.STUDENT   // fallback
+                    "PARENT" -> Role.PARENT
+                    "ADMIN" -> Role.ADMIN
+                    else -> Role.STUDENT
                 }
 
-                // 4) navigation
                 onSuccess(role)
-
-                // 5) reset UI
                 _uiState.value = LoginUiState()
+
             } catch (e: Exception) {
-                _uiState.value = LoginUiState(
-                    error = e.message ?: "Erreur inconnue"
-                )
+                _uiState.value = LoginUiState(error = e.message)
             }
         }
     }
 }
+

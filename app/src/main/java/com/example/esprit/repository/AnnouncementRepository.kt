@@ -2,8 +2,11 @@ package com.example.esprit.repository
 
 
 
+import com.example.esprit.model.AiGeneratedAnnouncement
 import com.example.esprit.model.AnnouncementDto
 import com.example.esprit.model.CreateAnnouncementRequest
+import com.example.esprit.model.GenerateAnnouncementRequest
+import com.example.esprit.model.SelectAnnouncementRequest
 import com.example.esprit.network.ApiService
 import javax.inject.Inject
 
@@ -12,7 +15,8 @@ class AnnouncementRepository @Inject constructor(
 ) {
 
     suspend fun list(): List<AnnouncementDto> =
-        api.getAnnouncements()
+        api.getAnnouncements().announcements
+
 
     suspend fun create(
         title: String,
@@ -48,4 +52,30 @@ class AnnouncementRepository @Inject constructor(
     suspend fun delete(id: String) {
         api.deleteAnnouncement(id)
     }
+    // -------- AI ANNOUNCEMENTS --------
+
+    suspend fun generateAiAnnouncements(
+        audience: String,
+        instruction: String
+    ): List<AiGeneratedAnnouncement> {
+        val req = GenerateAnnouncementRequest(audience, instruction)
+        return api.generateAiAnnouncements(req).announcements
+    }
+
+
+    suspend fun saveSelectedAiAnnouncement(
+        audience: String,
+        instruction: String,
+        senderId: String,
+        selectedIndex: Int
+    ): AnnouncementDto {
+        val req = SelectAnnouncementRequest(
+            audience = audience,
+            instruction = instruction,
+            senderId = senderId,
+            selectedIndex = selectedIndex
+        )
+        return api.saveSelectedAiAnnouncement(req)
+    }
+
 }

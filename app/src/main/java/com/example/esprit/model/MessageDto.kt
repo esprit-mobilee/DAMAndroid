@@ -1,6 +1,5 @@
 package com.example.esprit.model
 
-
 import com.google.gson.annotations.SerializedName
 
 data class MessageDto(
@@ -10,5 +9,6 @@ data class MessageDto(
     @SerializedName("content") val content: String,
     @SerializedName("type") val type: String?,
     @SerializedName("createdAt") val createdAt: String?,
-    @SerializedName("updatedAt") val updatedAt: String?
+    @SerializedName("updatedAt") val updatedAt: String?,
+    @SerializedName("reactions") val reactions: List<ReactionDto> = emptyList()
 )

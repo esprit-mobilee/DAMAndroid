@@ -8,33 +8,54 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
-val Context.dataStore by preferencesDataStore(Constants.DATASTORE_NAME)
+// Nom du DataStore
+val Context.dataStore by preferencesDataStore(name = "esprit_datastore")
 
 class DataStoreManager(private val context: Context) {
 
-    private val tokenKey = stringPreferencesKey(Constants.KEY_TOKEN)
+    // ============================
+    // KEYS
+    // ============================
+    private val tokenKey = stringPreferencesKey("token")
+    private val userIdKey = stringPreferencesKey("user_id")
 
-    // Flux du token (observer en temps réel)
+    // ============================
+    // TOKEN FLOW (✔ il existe)
+    // ============================
     val tokenFlow: Flow<String?> = context.dataStore.data.map { prefs ->
         prefs[tokenKey]
     }
 
-    // Récupérer le token (utilisé par ProfileViewModel, SplashViewModel, UserRepository…)
-    suspend fun getToken(): String {
-        return tokenFlow.first() ?: ""
-    }
-
-    // Sauvegarder le token après login
     suspend fun saveToken(token: String) {
         context.dataStore.edit { prefs ->
             prefs[tokenKey] = token
         }
     }
 
-    // Supprimer le token (logout)
+    suspend fun getToken(): String {
+        return tokenFlow.first() ?: ""
+    }
+
     suspend fun clearToken() {
         context.dataStore.edit { prefs ->
             prefs.remove(tokenKey)
         }
+    }
+
+    // ============================
+    // USER ID
+    // ============================
+    val userIdFlow: Flow<String?> = context.dataStore.data.map { prefs ->
+        prefs[userIdKey]
+    }
+
+    suspend fun saveUserId(id: String) {
+        context.dataStore.edit { prefs ->
+            prefs[userIdKey] = id
+        }
+    }
+
+    suspend fun getUserId(): String {
+        return userIdFlow.first() ?: ""
     }
 }

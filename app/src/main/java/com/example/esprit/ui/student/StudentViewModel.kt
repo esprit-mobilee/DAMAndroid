@@ -28,7 +28,8 @@ class StudentViewModel @Inject constructor(
 
     fun loadTimetable() {
         viewModelScope.launch {
-            val token = dataStore.tokenFlow.first() ?: return@launch
+            val token = dataStore.getToken()
+
             _timetable.value = Resource.Loading
             try {
                 val res = repo.timetable(token)

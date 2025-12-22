@@ -67,4 +67,11 @@ class UserRepository @Inject constructor(
             )
         )
     }
+    /**
+     * Récupérer tous les utilisateurs (pour nouvelle conversation)
+     */
+    suspend fun getAllUsers(): List<User> {
+        return api.getAllUsers()
+    }
+
 }

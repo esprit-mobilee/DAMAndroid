@@ -1,8 +1,9 @@
 package com.example.esprit.ui.nav
 
+import android.net.Uri
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -21,6 +22,7 @@ import com.example.esprit.ui.student.AbsenceScreen
 import com.example.esprit.ui.student.StudentHomeScreen
 import com.example.esprit.ui.student.TimetableScreen
 import com.example.esprit.ui.teacher.TeacherHomeScreen
+import com.example.esprit.util.DataStoreManager
 
 @Composable
 fun AppNavGraph(
@@ -28,11 +30,14 @@ fun AppNavGraph(
     splashViewModel: SplashViewModel = hiltViewModel(),
     loginViewModel: LoginViewModel = hiltViewModel()
 ) {
-    NavHost(navController = navController, startDestination = Destinations.SPLASH) {
+    NavHost(
+        navController = navController,
+        startDestination = Destinations.SPLASH
+    ) {
 
-        // --------------------------------------------------------------------
+        // ---------------------------------------------------------
         // SPLASH
-        // --------------------------------------------------------------------
+        // ---------------------------------------------------------
         composable(Destinations.SPLASH) {
             SplashScreen(
                 viewModel = splashViewModel,
@@ -45,98 +50,121 @@ fun AppNavGraph(
             )
         }
 
-        // --------------------------------------------------------------------
+        // ---------------------------------------------------------
         // LOGIN
-        // --------------------------------------------------------------------
+        // ---------------------------------------------------------
         composable(Destinations.LOGIN) {
             LoginScreen(viewModel = loginViewModel) { role ->
                 navController.navigate(roleToRoute(role)) { popUpTo(0) }
             }
         }
 
-        // --------------------------------------------------------------------
+        // ---------------------------------------------------------
         // STUDENT HOME
-        // --------------------------------------------------------------------
+        // ---------------------------------------------------------
         composable(Destinations.STUDENT_HOME) {
             StudentHomeScreen(
                 onNavigateTimetable = { navController.navigate(Destinations.TIMETABLE) },
                 onNavigateAbsences = { navController.navigate(Destinations.ABSENCES) },
                 onNavigateAnnouncements = { navController.navigate(Destinations.ANNOUNCEMENTS) },
-                onNavigateMessages = { navController.navigate(Destinations.MESSAGES) },   // <--- NEW
+                onNavigateMessages = { navController.navigate(Destinations.MESSAGES) },
                 onNavigateProfile = { navController.navigate(Destinations.PROFILE) },
-                onLogout = {
-                    navController.navigate(Destinations.LOGIN) { popUpTo(0) }
-                }
+                onLogout = { navController.navigate(Destinations.LOGIN) { popUpTo(0) } }
             )
         }
 
-        // --------------------------------------------------------------------
-        // TEACHER
-        // --------------------------------------------------------------------
+        // ---------------------------------------------------------
+        // TEACHER HOME
+        // ---------------------------------------------------------
         composable(Destinations.TEACHER_HOME) {
             TeacherHomeScreen(
                 onNavigateProfile = { navController.navigate(Destinations.PROFILE) },
-                onLogout = {
-                    navController.navigate(Destinations.LOGIN) { popUpTo(0) }
-                }
+                onNavigateMessages = { navController.navigate(Destinations.MESSAGES) },
+                onNavigateAnnouncements = { navController.navigate(Destinations.ANNOUNCEMENTS) },
+                onLogout = { navController.navigate(Destinations.LOGIN) { popUpTo(0) } }
             )
         }
 
-        // --------------------------------------------------------------------
-        // PARENT
-        // --------------------------------------------------------------------
+        // ---------------------------------------------------------
+        // PARENT HOME
+        // ---------------------------------------------------------
         composable(Destinations.PARENT_HOME) {
             ParentHomeScreen(
                 onNavigateProfile = { navController.navigate(Destinations.PROFILE) },
-                onLogout = {
-                    navController.navigate(Destinations.LOGIN) { popUpTo(0) }
-                }
+                onLogout = { navController.navigate(Destinations.LOGIN) { popUpTo(0) } }
             )
         }
 
-        // --------------------------------------------------------------------
-        // ADMIN
-        // --------------------------------------------------------------------
+        // ---------------------------------------------------------
+        // ADMIN HOME
+        // ---------------------------------------------------------
         composable(Destinations.ADMIN_HOME) {
             AdminHomeScreen(
                 onNavigateProfile = { navController.navigate(Destinations.PROFILE) },
-                onLogout = {
-                    navController.navigate(Destinations.LOGIN) { popUpTo(0) }
-                }
+                onLogout = { navController.navigate(Destinations.LOGIN) { popUpTo(0) } }
             )
         }
 
-        // --------------------------------------------------------------------
+        // ---------------------------------------------------------
         // TIMETABLE
-        // --------------------------------------------------------------------
+        // ---------------------------------------------------------
         composable(Destinations.TIMETABLE) {
             TimetableScreen()
         }
 
-        // --------------------------------------------------------------------
+        // ---------------------------------------------------------
         // ABSENCES
-        // --------------------------------------------------------------------
+        // ---------------------------------------------------------
         composable(Destinations.ABSENCES) {
             AbsenceScreen(token = "")
         }
 
-        // --------------------------------------------------------------------
+        // ---------------------------------------------------------
         // ANNOUNCEMENTS LIST
-        // --------------------------------------------------------------------
+        // ---------------------------------------------------------
         composable(Destinations.ANNOUNCEMENTS) {
             AnnouncementsScreen(navController)
         }
 
-        // --------------------------------------------------------------------
-        // ANNOUNCEMENT ADD
-        // --------------------------------------------------------------------
+        // ---------------------------------------------------------
+        // ANNOUNCEMENT CREATE
+        // ---------------------------------------------------------
         composable(Destinations.ANNOUNCEMENT_ADD) {
             AnnouncementCreateScreen(navController)
         }
 
-        // --------------------------------------------------------------------
+        // ---------------------------------------------------------
+        // ANNOUNCEMENT AI GENERATOR
+        // ---------------------------------------------------------
+        // ---------------------------------------------------------
+// ANNOUNCEMENT AI GENERATOR
+// ---------------------------------------------------------
+        // ---------------------------------------------------------
+// ANNOUNCEMENT AI GENERATOR
+// ---------------------------------------------------------
+        composable(Destinations.AI_ANNOUNCEMENTS) {
+
+            val context = LocalContext.current
+            val dataStore = DataStoreManager(context)
+
+            // 🟢 correction du State<String?> : pas de délégation
+            val userIdState = dataStore.userIdFlow.collectAsState(initial = "")
+            val userId = userIdState.value ?: ""
+
+            AiAnnouncementsScreen(
+                senderId = userId,
+                onSaved = {
+                    navController.navigate(Destinations.ANNOUNCEMENTS) {
+                        popUpTo(Destinations.ANNOUNCEMENTS) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+
+        // ---------------------------------------------------------
         // ANNOUNCEMENT EDIT
-        // --------------------------------------------------------------------
+        // ---------------------------------------------------------
         composable(
             route = Destinations.ANNOUNCEMENT_EDIT,
             arguments = listOf(navArgument("id") { type = NavType.StringType })
@@ -145,9 +173,9 @@ fun AppNavGraph(
             AnnouncementEditScreen(navController, id)
         }
 
-        // --------------------------------------------------------------------
+        // ---------------------------------------------------------
         // ANNOUNCEMENT DETAILS
-        // --------------------------------------------------------------------
+        // ---------------------------------------------------------
         composable(
             route = Destinations.ANNOUNCEMENT_DETAILS,
             arguments = listOf(navArgument("id") { type = NavType.StringType })
@@ -156,16 +184,23 @@ fun AppNavGraph(
             AnnouncementDetailsScreen(navController, id)
         }
 
-        // --------------------------------------------------------------------
+        // ---------------------------------------------------------
         // MESSAGES LIST
-        // --------------------------------------------------------------------
+        // ---------------------------------------------------------
         composable(Destinations.MESSAGES) {
             MessagesScreen(navController)
         }
+        // ---------------------------------------------------------
+// SELECT USER (NEW CONVERSATION)
+// ---------------------------------------------------------
+        composable(Destinations.SELECT_USER) {
+            SelectUserScreen(navController = navController)
+        }
 
-        // --------------------------------------------------------------------
+
+        // ---------------------------------------------------------
         // CHAT
-        // --------------------------------------------------------------------
+        // ---------------------------------------------------------
         composable(
             route = Destinations.CHAT,
             arguments = listOf(
@@ -173,8 +208,12 @@ fun AppNavGraph(
                 navArgument("peerName") { type = NavType.StringType }
             )
         ) { backStack ->
-            val peerId = backStack.arguments?.getString("peerId") ?: ""
-            val peerName = backStack.arguments?.getString("peerName") ?: ""
+            val peerId = backStack.arguments?.getString("peerId")
+                ?: return@composable   // ⛔ STOP si invalide
+
+            val peerName = Uri.decode(
+                backStack.arguments?.getString("peerName") ?: "Utilisateur"
+            )
 
             ChatScreen(
                 navController = navController,

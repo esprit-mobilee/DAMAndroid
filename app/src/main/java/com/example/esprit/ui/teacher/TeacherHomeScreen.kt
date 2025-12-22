@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Announcement
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -28,12 +29,15 @@ import com.example.esprit.ui.components.EspritTopBar
 import com.example.esprit.ui.components.HeroCard
 import com.example.esprit.ui.theme.BgGray
 import kotlinx.coroutines.launch
+import com.example.esprit.ui.nav.Destinations
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun TeacherHomeScreen(
     onLogout: () -> Unit,
-    onNavigateProfile: () -> Unit = {}
+    onNavigateProfile: () -> Unit = {},
+    onNavigateMessages: () -> Unit = {} ,
+    onNavigateAnnouncements: () -> Unit = {}// ← AJOUT IMPORTANT
 ) {
     val drawerState = rememberDrawerState(initialValue = androidx.compose.material3.DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -63,6 +67,14 @@ fun TeacherHomeScreen(
                         label = "Annonces",
                         icon = { Icon(Icons.Default.Announcement, null) },
                         onClick = { scope.launch { drawerState.close() } }
+                    ),
+                    DrawerDestination(
+                        label = "Messagerie",
+                        icon = { Icon(Icons.Default.Chat, null) },
+                        onClick = {
+                            scope.launch { drawerState.close() }
+                            onNavigateMessages()      // ← AJOUT
+                        }
                     )
                 ),
                 onLogout = {
@@ -98,7 +110,15 @@ fun TeacherHomeScreen(
                     ActionGridItem("Mes cours") { /* TODO */ }
                     ActionGridItem("Examens") { /* TODO */ }
                     ActionGridItem("Présence") { /* TODO */ }
-                    ActionGridItem("Annonces") { /* TODO */ }
+                    ActionGridItem("Annonces") {
+                        onNavigateAnnouncements()
+                    }
+
+
+                    // ⭐ AJOUT : MESSAGERIE ⭐
+                    ActionGridItem("Messagerie") {
+                        onNavigateMessages()
+                    }
                 }
             }
         }

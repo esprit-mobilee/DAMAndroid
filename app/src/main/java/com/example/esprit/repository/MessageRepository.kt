@@ -7,56 +7,78 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 
-private const val CURRENT_USER_ID = "691e24db7a1a6b2eb5bc6617" // TODO: remplacer DataStore
-
 class MessageRepository @Inject constructor(
     private val api: ApiService
 ) {
 
-    // -------------------------------------------
-    // LISTE DES CONVERSATIONS
-    // -------------------------------------------
-    suspend fun getUserConversations(): List<ConversationResponse> {
-        return api.getConversations(CURRENT_USER_ID)
+    suspend fun getUserConversations(currentUserId: String): List<ConversationResponse> {
+        return api.getConversations(currentUserId)
     }
 
-    // -------------------------------------------
-    // GET CONVERSATION
-    // -------------------------------------------
-    suspend fun getConversation(peerId: String): List<Message> {
-        val dtos = api.getConversation(CURRENT_USER_ID, peerId)
-        return dtos.map { it.toDomain(CURRENT_USER_ID) }
+    suspend fun getConversationForUser(
+        currentUserId: String,
+        peerId: String
+    ): List<Message> {
+        val dtos = api.getConversation(
+            user1 = currentUserId,
+            user2 = peerId
+        )
+        return dtos.map { it.toDomain(currentUserId) }
     }
 
-    // -------------------------------------------
-    // SEND MESSAGE
-    // -------------------------------------------
-    suspend fun sendMessage(peerId: String, content: String): Message {
+    suspend fun sendMessageForUser(
+        currentUserId: String,
+        peerId: String,
+        content: String
+    ): Message {
         val body = SendMessageRequest(
-            senderId = CURRENT_USER_ID,
+            senderId = currentUserId,
             receiverId = peerId,
             content = content,
             type = "text"
         )
-
-        val dto = api.sendMessage(body)
-        return dto.toDomain(CURRENT_USER_ID)
+        return api.sendMessage(body).toDomain(currentUserId)
     }
-    // -------------------------------------------
-    // UPLOAD FILE (audio / image / pdf)
-    // -------------------------------------------
-    suspend fun uploadFile(file: java.io.File, mimeType: String): UploadResponse {
 
-        val requestFile = file
-            .asRequestBody(mimeType.toMediaType())
-
-        val multipart = MultipartBody.Part.createFormData(
-            name = "file",
-            filename = file.name,
-            body = requestFile
+    suspend fun summarizeConversationForUser(
+        currentUserId: String,
+        peerId: String
+    ): ChatSummaryResponse? {
+        return api.summarizeMessages(
+            receiverId = currentUserId,
+            senderId = peerId
+        )
+    }
+    suspend fun reactToMessage(
+        messageId: String,
+        userId: String,
+        emoji: String
+    ): Message {
+        val body = mapOf(
+            "userId" to userId,
+            "emoji" to emoji
         )
 
+        val dto = api.reactToMessage(messageId, body)
+        return dto.toDomain(userId)
+    }
+
+
+    suspend fun uploadFile(file: java.io.File, mimeType: String): UploadResponse {
+        val requestBody = file.asRequestBody(mimeType.toMediaType())
+        val multipart = MultipartBody.Part.createFormData("file", file.name, requestBody)
         return api.uploadMessageFile(multipart)
     }
+    suspend fun summarizeAllMessages(
+        currentUserId: String,
+        peerId: String
+    ): ChatSummaryResponse? {
+        return api.summarizeAll(
+            receiverId = currentUserId,
+            senderId = peerId
+        )
+    }
+
+
 
 }

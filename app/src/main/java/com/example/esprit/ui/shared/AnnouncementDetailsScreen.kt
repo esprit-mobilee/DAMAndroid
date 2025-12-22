@@ -81,10 +81,11 @@ fun AnnouncementDetailsScreen(
                     )
 
                     Text(
-                        text = ann.createdAt.take(10),
+                        text = (ann.createdAt ?: "Aucune date").take(10),
                         style = MaterialTheme.typography.labelMedium,
                         color = Color.Gray
                     )
+
                 }
 
                 Text(
