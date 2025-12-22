@@ -12,32 +12,35 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SplashViewModel @Inject constructor(
-    private val dataStore: DataStoreManager,
-    private val repo: AuthRepository
+    private val authRepo: AuthRepository,
+    private val dataStore: DataStoreManager
 ) : ViewModel() {
 
-    fun checkAuth(onResult: (Boolean, Role?) -> Unit) {
+    fun checkAuth(callback: (Boolean, Role?) -> Unit) {
         viewModelScope.launch {
-            val token = dataStore.tokenFlow.first()
-            if (token.isNullOrEmpty()) {
-                onResult(false, null)
-            } else {
-                try {
-                    val user = repo.me(token)
 
-                    // ✅ Map the backend string role -> our enum Role
-                    val role = when (user.role.uppercase()) {
-                        "STUDENT" -> Role.STUDENT
-                        "TEACHER" -> Role.TEACHER
-                        "PARENT"  -> Role.PARENT
-                        "ADMIN"   -> Role.ADMIN
-                        else      -> Role.STUDENT // fallback if unknown
-                    }
+            val token = dataStore.tokenFlow.first() ?: ""
 
-                    onResult(true, role)
-                } catch (e: Exception) {
-                    onResult(false, null)
+            if (token.isBlank()) {
+                callback(false, null)
+                return@launch
+            }
+
+            try {
+                val user = authRepo.me(token)
+
+                val role = when (user.role?.uppercase()) {
+                    "STUDENT" -> Role.STUDENT
+                    "TEACHER" -> Role.TEACHER
+                    "PARENT"  -> Role.PARENT
+                    "ADMIN"   -> Role.ADMIN
+                    else      -> Role.STUDENT
                 }
+
+                callback(true, role)
+
+            } catch (e: Exception) {
+                callback(false, null)
             }
         }
     }

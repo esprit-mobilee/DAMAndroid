@@ -4,8 +4,9 @@ import android.Manifest
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -28,8 +29,6 @@ fun MessageInput(
             .fillMaxWidth()
             .padding(8.dp)
     ) {
-
-        // Champ texte
         OutlinedTextField(
             value = text,
             onValueChange = { text = it },
@@ -39,24 +38,12 @@ fun MessageInput(
 
         Spacer(modifier = Modifier.width(8.dp))
 
-        // Bouton Micro / Stop
         IconButton(
             onClick = {
-                if (!isRecording) {     // start recording
-                    if (PermissionUtils.hasPermission(
-                            context,
-                            Manifest.permission.RECORD_AUDIO
-                        )
-                    ) {
-                        onStartRecord()
-                        isRecording = true
-                    } else {
-                        PermissionUtils.requestPermission(
-                            context,
-                            Manifest.permission.RECORD_AUDIO
-                        )
-                    }
-                } else {                // stop recording
+                if (!isRecording) {
+                    onStartRecord()
+                    isRecording = true
+                } else {
                     onStopRecord()
                     isRecording = false
                 }
@@ -64,13 +51,12 @@ fun MessageInput(
         ) {
             Icon(
                 imageVector = if (isRecording) Icons.Default.Stop else Icons.Default.Mic,
-                contentDescription = if (isRecording) "Stop" else "Record"
+                contentDescription = null
             )
         }
 
         Spacer(modifier = Modifier.width(4.dp))
 
-        // Bouton Envoyer texte
         IconButton(
             onClick = {
                 if (text.isNotBlank()) {
@@ -79,7 +65,7 @@ fun MessageInput(
                 }
             }
         ) {
-            Icon(Icons.Default.Send, contentDescription = "Send")
+            Icon(Icons.Default.Send, contentDescription = null)
         }
     }
 }

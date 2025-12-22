@@ -81,7 +81,7 @@ fun AnnouncementCardPremium(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = ann.createdAt.substring(0, 10),
+                        text = (ann.createdAt ?: "Aucune date").take(10),
                         color = Color.DarkGray,
                         style = MaterialTheme.typography.labelSmall
                     )

@@ -2,9 +2,16 @@ package com.example.esprit.model
 
 data class AuthResponse(
     val accessToken: String,
-    val refreshToken: String? = null,
-    val userId: String,
+    val refreshToken: String,
+    val user: UserResponse,
+    val message: String?
+)
+
+data class UserResponse(
+    val id: String,
+    val name: String,
+    val email: String,
     val role: String,
-    val email: String? = null,
-    val message: String? = null
+    val classGroup: String?,
+    val studentId: String?
 )

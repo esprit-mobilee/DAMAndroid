@@ -1,7 +1,10 @@
 package com.example.esprit.model
 
+import com.google.gson.annotations.SerializedName
+
 data class User(
-    val id: String,
+    @SerializedName("_id")
+    val id: String? = null,
     val name: String? = null,           // ✅ added unified name (first + last combined)
     val firstName: String? = null,
     val lastName: String? = null,

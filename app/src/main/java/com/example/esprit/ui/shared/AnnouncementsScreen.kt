@@ -1,13 +1,11 @@
 package com.example.esprit.ui.shared
 
-
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -16,8 +14,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
-import com.example.esprit.ui.shared.AnnouncementCardPremium
-import com.example.esprit.ui.shared.AnnouncementsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -30,8 +26,8 @@ fun AnnouncementsScreen(
     var search by remember { mutableStateOf("") }
     var filter by remember { mutableStateOf("Tous") }
 
-    // tri par date DESC
-    val sorted = announcements.sortedByDescending { it.createdAt }
+    val sorted = announcements.sortedByDescending { it.createdAt ?: "" }
+
 
     val filtered = sorted.filter {
         (filter == "Tous" || it.audience.equals(filter, true)) &&
@@ -47,8 +43,23 @@ fun AnnouncementsScreen(
                     titleContentColor = Color.White
                 ),
                 actions = {
+
+                    // 🔥 BOUTON IA
+                    IconButton(onClick = { navController.navigate("ai-announcements") }) {
+                        Icon(
+                            Icons.Default.AutoAwesome,
+                            contentDescription = "Créer via IA",
+                            tint = Color.White
+                        )
+                    }
+
+                    // BOUTON NORMAL AJOUT
                     IconButton(onClick = { navController.navigate("announcement_add") }) {
-                        Icon(Icons.Default.Add, contentDescription = "Ajouter", tint = Color.White)
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = "Ajouter une annonce",
+                            tint = Color.White
+                        )
                     }
                 }
             )
@@ -61,7 +72,7 @@ fun AnnouncementsScreen(
                 .padding(12.dp)
         ) {
 
-            // SEARCH BAR
+            // SEARCH
             OutlinedTextField(
                 value = search,
                 onValueChange = { search = it },
@@ -100,7 +111,7 @@ fun AnnouncementsScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            // LISTE DES ANNONCES
+            // LISTE ANNONCES
             LazyColumn(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 items(filtered) { ann ->
                     AnnouncementCardPremium(

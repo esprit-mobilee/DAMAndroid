@@ -1,5 +1,6 @@
 package com.example.esprit.di
 
+import com.example.esprit.network.AiService
 import com.example.esprit.network.ApiService
 import com.example.esprit.util.Constants
 import dagger.Module
@@ -59,4 +60,9 @@ object NetworkModule {
     @Singleton
     fun provideApiService(retrofit: Retrofit): ApiService =
         retrofit.create(ApiService::class.java)
+    @Provides
+    @Singleton
+    fun provideAiService(retrofit: Retrofit): AiService =
+        retrofit.create(AiService::class.java)
+
 }

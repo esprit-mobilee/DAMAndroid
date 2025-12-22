@@ -4,13 +4,16 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import com.example.esprit.util.DataStoreManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -21,12 +24,45 @@ fun ChatScreen(
 ) {
     val vm: ChatViewModel = hiltViewModel()
 
-    LaunchedEffect(peerId) {
-        vm.init(peerId)
+    val context = LocalContext.current
+    val dataStore = remember { DataStoreManager(context) }
+
+    var currentUserId by remember { mutableStateOf("") }
+
+    val messages by vm.messages.collectAsState()
+    val summary by vm.summary.collectAsState()
+
+    // Récupérer userId depuis DataStore
+    LaunchedEffect(Unit) {
+        val id = dataStore.getUserId()
+        currentUserId = id
+        println("🔥 UI → currentUserId LOADED = $id")
     }
 
-    val messages by vm.filteredMessages.collectAsState()
-    val searchQuery by vm.searchQuery.collectAsState()
+    // Initialisation du ViewModel quand userId est prêt
+    LaunchedEffect(currentUserId) {
+        if (currentUserId.isNotBlank()) {
+            println("🔥 UI → INIT ViewModel with user=$currentUserId peer=$peerId")
+            vm.setCurrentUser(currentUserId)
+            vm.init(peerId, currentUserId)
+        }
+    }
+
+    // =============================
+    // POPUP RÉSUMÉ IA
+    // =============================
+    if (summary != null) {
+        AlertDialog(
+            onDismissRequest = { vm.clearSummary() },
+            title = { Text("Résumé de la conversation") },
+            text = { Text(summary?.summary ?: "Aucun contenu") },
+            confirmButton = {
+                TextButton(onClick = { vm.clearSummary() }) {
+                    Text("Fermer")
+                }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -34,7 +70,15 @@ fun ChatScreen(
                 title = { Text(peerName) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Retour")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    }
+                },
+                actions = {
+                    IconButton(onClick = {
+                        println("⚡ UI: Summarize clicked")
+                        vm.summarizeAll()
+                    }) {
+                        Icon(Icons.Default.AutoAwesome, contentDescription = "AI Summary")
                     }
                 }
             )
@@ -43,33 +87,26 @@ fun ChatScreen(
             MessageInput(
                 onSend = { vm.sendMessage(it) },
                 onStartRecord = { vm.startRecording() },
-                onStopRecord = { vm.stopRecording() }        // ← MANQUAIT
+                onStopRecord = { vm.stopRecording() }
             )
         }
     ) { padding ->
 
         LazyColumn(
             modifier = Modifier
+                .padding(padding)
                 .fillMaxSize()
-                .padding(padding),
-            verticalArrangement = Arrangement.Top
         ) {
-
-            item {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { vm.onSearchQueryChanged(it) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    placeholder = { Text("Rechercher un message...") }
+            items(messages) { msgItem ->
+                MessageBubble(
+                    message = msgItem,
+                    onReact = { emoji ->
+                        println("😀 Reaction $emoji on message ${msgItem.id}")
+                        // (on branchera l’API juste après)
+                    }
                 )
-            }
 
-            items(messages, key = { it.id }) { message ->
-                MessageBubble(message = message)
             }
         }
     }
 }
-

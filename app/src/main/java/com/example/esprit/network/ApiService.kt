@@ -76,7 +76,8 @@ interface ApiService {
     // ---------------------------------------------------------
 
     @GET("announcements")
-    suspend fun getAnnouncements(): List<AnnouncementDto>
+    suspend fun getAnnouncements(): AnnouncementsResponse
+
 
     @POST("announcements")
     suspend fun createAnnouncement(
@@ -105,6 +106,10 @@ interface ApiService {
         @Path("u1") user1: String,
         @Path("u2") user2: String
     ): List<MessageDto>
+    @POST("api/generate")
+    suspend fun generateDirectFromPython(
+        @Body req: Map<String, String>
+    ): AiGenerateResponse
 
     // envoyer un message
     @POST("messages")
@@ -126,6 +131,41 @@ interface ApiService {
     suspend fun uploadMessageFile(
         @Part file: MultipartBody.Part
     ): UploadResponse
+    @POST("api/messages/summarize/{receiverId}/{senderId}")
+    suspend fun summarizeMessages(
+        @Path("receiverId") receiverId: String,
+        @Path("senderId") senderId: String
+    ): ChatSummaryResponse
+    @POST("messages/summarize-all/{receiverId}/{senderId}")
+    suspend fun summarizeAll(
+        @Path("receiverId") receiverId: String,
+        @Path("senderId") senderId: String
+    ): ChatSummaryResponse
+
+// ---------------------------------------------------------
+// AI ANNOUNCEMENTS (NEW)
+// ---------------------------------------------------------
+
+    @POST("announcements/generate")
+    suspend fun generateAiAnnouncements(
+        @Body req: GenerateAnnouncementRequest
+    ): AiGenerateResponse
+
+
+    @POST("announcements/generate-select-save")
+    suspend fun saveSelectedAiAnnouncement(
+        @Body req: SelectAnnouncementRequest
+    ): AnnouncementDto
+    // ---------------------------------------------------------
+// USERS
+// ---------------------------------------------------------
+    @GET("utilisateurs")
+    suspend fun getAllUsers(): List<User>
+    @POST("messages/{id}/react")
+    suspend fun reactToMessage(
+        @Path("id") messageId: String,
+        @Body body: Map<String, String>
+    ): MessageDto
 
 
 }

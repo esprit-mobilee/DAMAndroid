@@ -21,6 +21,9 @@ object Destinations {
     const val ANNOUNCEMENT_ADD = "announcement_add"
     const val ANNOUNCEMENT_EDIT = "announcement_edit/{id}"
     const val ANNOUNCEMENT_DETAILS = "announcement_details/{id}"
+    const val AI_ANNOUNCEMENTS = "ai-announcements"
+
+
 
     // ---------- PROFILE ----------
     const val PROFILE = "profile"
@@ -28,4 +31,5 @@ object Destinations {
     // ---------- MESSAGING ----------
     const val MESSAGES = "messages"
     const val CHAT = "chat/{peerId}/{peerName}"
+    const val SELECT_USER = "select_user"
 }
