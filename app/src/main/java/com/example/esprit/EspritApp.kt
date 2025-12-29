@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 package com.example.esprit
 
 
@@ -10,3 +11,17 @@ import dagger.hilt.android.HiltAndroidApp
  */
 @HiltAndroidApp
 class EspritApp : Application()
+=======
+package com.example.esprit
+
+
+
+import android.app.Application
+import dagger.hilt.android.HiltAndroidApp
+
+/**
+ * Base application class that initializes Hilt dependency injection.
+ */
+@HiltAndroidApp
+class EspritApp : Application()
+>>>>>>> origin/messaging-announcement

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 *.iml
 .gradle
 /local.properties
@@ -13,3 +14,51 @@
 .externalNativeBuild
 .cxx
 local.properties
+=======
+# ========================
+# Android / Gradle
+# ========================
+.gradle/
+build/
+**/build/
+
+# ========================
+# IDE
+# ========================
+.idea/
+.vscode/
+.kotlin/
+*.iml
+
+# ========================
+# Local config
+# ========================
+local.properties
+
+# ========================
+# OS
+# ========================
+.DS_Store
+Thumbs.db
+
+# ========================
+# Logs & outputs
+# ========================
+*.log
+*_log.txt
+*_output.txt
+compile_*.txt
+error_lines*.txt
+
+# ========================
+# Temp backend / TS files
+# ========================
+*_temp.ts
+
+# ========================
+# Native build
+# ========================
+.externalNativeBuild/
+.cxx/
+saging-announcement
+>>>>>>> origin/messaging-announcement

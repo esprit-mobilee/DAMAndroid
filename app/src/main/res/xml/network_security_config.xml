@@ -1,5 +1,13 @@
+<<<<<<< HEAD
 <?xml version="1.0" encoding="utf-8"?>
 <network-security-config>
     <!-- ✅ Permissive config for development: allows all HTTP traffic (cleartext) -->
     <base-config cleartextTrafficPermitted="true" />
 </network-security-config>
+=======
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- ✅ Permissive config for development: allows all HTTP traffic (cleartext) -->
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
+>>>>>>> origin/messaging-announcement

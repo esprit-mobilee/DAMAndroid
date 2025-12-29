@@ -9,7 +9,10 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" 
         android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+<<<<<<< HEAD
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+=======
+>>>>>>> origin/messaging-announcement
     <queries>
         <intent>
             <action android:name="android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH" />
@@ -42,6 +45,7 @@
             </intent-filter>
         </activity>
 
+<<<<<<< HEAD
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -52,6 +56,8 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+=======
+>>>>>>> origin/messaging-announcement
     </application>
 
 </manifest>

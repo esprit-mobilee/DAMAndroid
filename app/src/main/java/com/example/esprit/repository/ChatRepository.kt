@@ -79,7 +79,7 @@ class ChatRepository @Inject constructor(
 
     suspend fun getConversations(userId: String): Result<List<ConversationDto>> {
         return try {
-            val conversations = apiService.getConversations(userId)
+            val conversations = apiService.getClubChatConversations(userId)
             Result.success(conversations)
         } catch (e: Exception) {
             Result.failure(e)
