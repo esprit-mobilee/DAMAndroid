@@ -27,7 +27,9 @@ import com.example.esprit.ui.components.HeroCard
 import com.example.esprit.ui.theme.BgGray
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun TeacherHomeScreen(
     onLogout: () -> Unit,

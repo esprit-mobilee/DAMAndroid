@@ -14,6 +14,9 @@ class ClubPostsRepository @Inject constructor(
     suspend fun list(clubId: String): UiState<List<ClubPostDto>> =
         safeCall { api.getClubPosts(clubId) }
 
+    suspend fun getPost(id: String): UiState<ClubPostDto> =
+        safeCall { api.getClubPost(id) }
+
     suspend fun create(
         clubId: String,
         content: RequestBody,

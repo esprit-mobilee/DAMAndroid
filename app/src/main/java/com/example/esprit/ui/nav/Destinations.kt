@@ -25,6 +25,10 @@ object Destinations {
     const val CLUB_POSTS = "club/posts"
     const val CLUB_POST_CREATE = "club/posts/create/{clubId}"
     const val CLUB_POST_EDIT = "club/posts/edit/{postId}"
+    
+    const val CLUB_POST_DETAIL = "post_detail/{postId}"
+    fun clubPostDetailRoute(postId: String) = "post_detail/$postId"
+
     const val CLUB_MEMBERS = "club/members"
     const val CLUB_SETTINGS = "club/settings"
     const val CLUB_NOTIFICATIONS = "club/notifications"
@@ -34,6 +38,16 @@ object Destinations {
     const val ABSENCES = "absences"
     const val ANNOUNCEMENTS = "announcements"
     const val PROFILE = "profile"
+
+    // Document Requests
+    const val DOCUMENT_REQUEST_FORM = "document_request_form"
+    const val DOCUMENT_REQUEST_HISTORY = "document_request_history"
+    const val DOCUMENT_REQUEST_DETAIL = "document_request_detail/{requestId}"
+    const val DOCUMENT_VIEWER = "document_viewer/{fileUrl}"
+
+    // Admin Requests
+    const val ADMIN_DOCUMENT_REQUESTS = "admin_document_requests"
+    const val ADMIN_DOCUMENT_REQUEST_DETAIL = "admin_document_request_detail/{requestId}"
 
 
 

@@ -28,6 +28,9 @@ class AuthManager @Inject constructor(
         
         // 3. Optionnel : effacer les favoris
         dataStoreManager.clearFavorites()
+        
+        // 4. Effacer les notifications locales
+        dataStoreManager.clearLocalNotifications()
     }
     
     /**

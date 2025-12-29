@@ -17,6 +17,7 @@ class DataStoreManager(private val context: Context) {
     private val tokenKey = stringPreferencesKey(Constants.KEY_TOKEN)
     private val rememberMeKey = androidx.datastore.preferences.core.booleanPreferencesKey("remember_me")
     private val favoritesKey = stringSetPreferencesKey("favorite_internships")
+    private val localNotificationsKey = stringPreferencesKey("local_notifications")
 
     // observe token as Flow (for UI / ViewModel)
     val tokenFlow: Flow<String?> = context.dataStore.data.map { prefs ->
@@ -99,6 +100,51 @@ class DataStoreManager(private val context: Context) {
     suspend fun clearFavorites() {
         context.dataStore.edit { prefs ->
             prefs.remove(favoritesKey)
+        }
+    }
+
+    // ==================================================
+    // DOCUMENT PDF URIs
+    // ==================================================
+    fun getPdfUriKey(requestId: String) = stringPreferencesKey("pdf_uri_$requestId")
+
+    suspend fun savePdfUri(requestId: String, uri: String) {
+        context.dataStore.edit { prefs ->
+            prefs[getPdfUriKey(requestId)] = uri
+        }
+    }
+
+    suspend fun getPdfUri(requestId: String): String? {
+        return context.dataStore.data.map { prefs ->
+            prefs[getPdfUriKey(requestId)]
+        }.first()
+    }
+
+    suspend fun clearPdfUri(requestId: String) {
+        context.dataStore.edit { prefs ->
+            prefs.remove(getPdfUriKey(requestId))
+        }
+    }
+
+    // ==================================================
+    // LOCAL NOTIFICATIONS (WebSocket notifications persistence)
+    // ==================================================
+    
+    suspend fun saveLocalNotifications(notificationsJson: String) {
+        context.dataStore.edit { prefs ->
+            prefs[localNotificationsKey] = notificationsJson
+        }
+    }
+    
+    suspend fun getLocalNotifications(): String? {
+        return context.dataStore.data.map { prefs ->
+            prefs[localNotificationsKey]
+        }.first()
+    }
+    
+    suspend fun clearLocalNotifications() {
+        context.dataStore.edit { prefs ->
+            prefs.remove(localNotificationsKey)
         }
     }
 }

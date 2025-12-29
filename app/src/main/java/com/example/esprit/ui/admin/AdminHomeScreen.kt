@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Work
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -41,14 +42,17 @@ import com.example.esprit.ui.components.StatCard
 import com.example.esprit.ui.theme.BgGray
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AdminHomeScreen(
     onLogout: () -> Unit,
     onNavigateProfile: () -> Unit = {},
     onNavigateVieEtudiante: () -> Unit = {},
     onNavigateStages: () -> Unit = {},
-    onNavigateApplications: () -> Unit = {}
+    onNavigateApplications: () -> Unit = {},
+    onNavigateToRequests: () -> Unit = {}
 ) {
     val drawerState = rememberDrawerState(initialValue = androidx.compose.material3.DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -217,6 +221,20 @@ fun AdminHomeScreen(
                         }
                     ) {
                         onNavigateApplications()
+                    }
+
+                    ActionGridItem(
+                        label = "Demandes",
+                        icon = {
+                            Icon(
+                                Icons.Default.Description,
+                                contentDescription = null,
+                                tint = Color(0xFFD32F2F),
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                    ) {
+                        onNavigateToRequests()
                     }
                 }
             }

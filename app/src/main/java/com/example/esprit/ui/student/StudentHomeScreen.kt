@@ -13,6 +13,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
@@ -33,7 +34,12 @@ import com.example.esprit.ui.shared.ProfileViewModel
 import com.example.esprit.ui.theme.BgGray
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+
+import com.example.esprit.ui.notifications.NotificationBellIcon
+import com.example.esprit.ui.notifications.NotificationsViewModel
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun StudentHomeScreen(
     onNavigateTimetable: () -> Unit,
@@ -44,14 +50,26 @@ fun StudentHomeScreen(
     onNavigateAIChat: () -> Unit,
     onNavigateClubs: () -> Unit,
     onNavigateMessages: () -> Unit,
+    onNavigateDocumentRequests: () -> Unit,
     onNavigateClubChat: (String) -> Unit, // New callback
     onLogout: () -> Unit,
-    profileViewModel: ProfileViewModel = hiltViewModel()
+    onNavigateNotifications: () -> Unit = {},
+    profileViewModel: ProfileViewModel = hiltViewModel(),
+    notificationsViewModel: NotificationsViewModel = hiltViewModel()
 ) {
     LaunchedEffect(Unit) {
         profileViewModel.loadMe()
+        notificationsViewModel.fetchNotifications()
     }
     val ui by profileViewModel.uiState.collectAsState()
+    val unreadCount by notificationsViewModel.unreadCount.collectAsState()
+
+    // Connect socket when user is loaded
+    LaunchedEffect(ui.user) {
+        ui.user?.id?.let { userId ->
+            notificationsViewModel.connectSocket(userId)
+        }
+    }
 
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -128,7 +146,13 @@ fun StudentHomeScreen(
                 EspritTopBar(
                     title = "ESPRIT",
                     subtitle = "Espace Étudiant",
-                    onMenuClick = { scope.launch { drawerState.open() } }
+                    onMenuClick = { scope.launch { drawerState.open() } },
+                    actions = {
+                        NotificationBellIcon(
+                            unreadCount = unreadCount,
+                            onClick = onNavigateNotifications
+                        )
+                    }
                 )
             },
             containerColor = BgGray
@@ -278,6 +302,19 @@ fun StudentHomeScreen(
                             )
                         },
                         onClick = onNavigateAIChat
+                    )
+
+                    ActionGridItem(
+                        label = "Demandes Documents",
+                        icon = {
+                            Icon(
+                                Icons.Default.Description,
+                                contentDescription = null,
+                                tint = Color(0xFFD32F2F),
+                                modifier = Modifier.size(28.dp)
+                            )
+                        },
+                        onClick = onNavigateDocumentRequests
                     )
                 }
             }

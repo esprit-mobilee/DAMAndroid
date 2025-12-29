@@ -12,12 +12,12 @@ plugins {
 
 android {
     namespace = "com.example.esprit"
-    compileSdk = 36
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "com.example.esprit"
         minSdk = 24
-        targetSdk = 36
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
 
@@ -128,6 +128,9 @@ dependencies {
     implementation("io.socket:socket.io-client:2.1.0") {
         exclude(group = "org.json", module = "json")
     }
+
+    // ZXing for QR codes
+    implementation("com.google.zxing:core:3.5.2")
 
 }
 

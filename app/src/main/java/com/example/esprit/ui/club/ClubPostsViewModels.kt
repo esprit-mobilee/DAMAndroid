@@ -17,6 +17,7 @@ import javax.inject.Inject
 data class PostsUiState(
     val loading: Boolean = false,
     val posts: List<ClubPostDto> = emptyList(),
+    val selectedPost: ClubPostDto? = null,
     val error: String? = null
 )
 
@@ -51,13 +52,28 @@ class ClubPostsViewModel @Inject constructor(
             when (val res = repo.list(clubId)) {
                 is UiState.Success -> {
                     android.util.Log.d("ClubPostsViewModel", "Loaded ${res.data.size} posts")
-                    _uiState.value = PostsUiState(posts = res.data)
+                    _uiState.value = _uiState.value.copy(posts = res.data, loading = false)
                 }
                 is UiState.Error -> {
                     android.util.Log.e("ClubPostsViewModel", "Error loading posts: ${res.message}")
-                    _uiState.value = PostsUiState(error = res.message)
+                    _uiState.value = _uiState.value.copy(error = res.message, loading = false)
                 }
-                UiState.Loading -> _uiState.value = PostsUiState(loading = true)
+                UiState.Loading -> _uiState.value = _uiState.value.copy(loading = true)
+            }
+        }
+    }
+
+    fun loadPost(postId: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(loading = true, error = null)
+            when (val res = repo.getPost(postId)) {
+                is UiState.Success -> {
+                    _uiState.value = _uiState.value.copy(selectedPost = res.data, loading = false)
+                }
+                is UiState.Error -> {
+                    _uiState.value = _uiState.value.copy(error = res.message, loading = false)
+                }
+                UiState.Loading -> _uiState.value = _uiState.value.copy(loading = true)
             }
         }
     }

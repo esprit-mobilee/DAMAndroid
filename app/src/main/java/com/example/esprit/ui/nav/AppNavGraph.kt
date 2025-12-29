@@ -64,7 +64,7 @@ import com.example.esprit.ui.club.screens.CreateClubPostScreen
 import com.example.esprit.ui.club.screens.EditClubEventScreen
 import com.example.esprit.ui.club.screens.EventDetailScreen
 import com.example.esprit.ui.club.screens.MembersListScreen
-import com.example.esprit.ui.club.screens.NotificationsScreen
+import com.example.esprit.ui.notifications.NotificationsScreen
 
 @EntryPoint
 @InstallIn(SingletonComponent::class)
@@ -158,6 +158,8 @@ fun AppNavGraph(
         // STUDENT HOME
         // ----------------------------------------------------------
         composable(Destinations.STUDENT_HOME) {
+            val notifVm: com.example.esprit.ui.notifications.NotificationsViewModel = hiltViewModel()
+            
             StudentHomeScreen(
                 onNavigateTimetable = { navController.navigate(Destinations.TIMETABLE) },
                 onNavigateAbsences = { navController.navigate(Destinations.ABSENCES) },
@@ -165,12 +167,17 @@ fun AppNavGraph(
                 onNavigateProfile = { navController.navigate(Destinations.PROFILE) },
                 onNavigateClubs = { navController.navigate(Destinations.STUDENT_CLUBS) },
                 onNavigateMessages = { navController.navigate(Destinations.MESSAGES) },
+                onNavigateDocumentRequests = { navController.navigate(Destinations.DOCUMENT_REQUEST_HISTORY) },
                 onNavigateStages = { navController.navigate(Destinations.STUDENT_INTERNSHIP_LIST) },
                 onNavigateAIChat = { navController.navigate(Destinations.AI_CHAT) },
                 onNavigateClubChat = { clubId ->
                     navController.navigate(Destinations.clubChatRoute(clubId, "Chat"))
                 },
-                onLogout = { handleLogout() }
+                onNavigateNotifications = {
+                    navController.navigate(Destinations.CLUB_NOTIFICATIONS)
+                },
+                onLogout = { handleLogout() },
+                notificationsViewModel = notifVm
             )
         }
 
@@ -206,7 +213,38 @@ fun AppNavGraph(
                 onNavigateApplications = {
                     navController.navigate(Destinations.ADMIN_APPLICATIONS_LIST)
                 },
+                onNavigateToRequests = { navController.navigate(Destinations.ADMIN_DOCUMENT_REQUESTS) },
                 onLogout = { handleLogout() }
+            )
+        }
+
+        composable(Destinations.ADMIN_DOCUMENT_REQUESTS) {
+            com.example.esprit.ui.admin.requests.AdminDocumentRequestListScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToDetail = { id ->
+                    navController.navigate(
+                        Destinations.ADMIN_DOCUMENT_REQUEST_DETAIL.replace("{requestId}", id)
+                    )
+                }
+            )
+        }
+
+        composable(
+            route = Destinations.ADMIN_DOCUMENT_REQUEST_DETAIL,
+            arguments = listOf(navArgument("requestId") { type = androidx.navigation.NavType.StringType })
+        ) { backStackEntry ->
+            val requestId = backStackEntry.arguments?.getString("requestId") ?: ""
+            val viewModel: com.example.esprit.ui.admin.requests.AdminDocumentRequestViewModel = hiltViewModel()
+            
+            LaunchedEffect(requestId) {
+                 if (viewModel.uiState.value.selectedRequest?.id != requestId) {
+                     viewModel.loadRequest(requestId)
+                 }
+            }
+            
+            com.example.esprit.ui.admin.requests.AdminDocumentRequestDetailScreen(
+                viewModel = viewModel,
+                onBack = { navController.popBackStack() }
             )
         }
 
@@ -227,6 +265,76 @@ fun AppNavGraph(
                 uiState = ui.value,
                 onChangePassword = { old, new -> vm.changePassword(old, new) },
                 onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Destinations.DOCUMENT_REQUEST_FORM) {
+            val vm: com.example.esprit.ui.demande.DocumentRequestViewModel = hiltViewModel()
+            com.example.esprit.ui.demande.DocumentRequestScreen(
+                viewModel = vm,
+                onBack = { navController.popBackStack() },
+                onOpenHistory = { navController.navigate(Destinations.DOCUMENT_REQUEST_HISTORY) }
+            )
+        }
+
+        // --- DOCUMENT REQUEST HISTORY ---
+        composable(Destinations.DOCUMENT_REQUEST_HISTORY) {
+            val vm: com.example.esprit.ui.demande.DocumentRequestListViewModel = hiltViewModel()
+            com.example.esprit.ui.demande.DocumentRequestListScreen(
+                viewModel = vm,
+                onBack = { navController.popBackStack() },
+                onCreateRequest = { navController.navigate(Destinations.DOCUMENT_REQUEST_FORM) },
+                onRequestClick = { requestId ->
+                    navController.navigate(
+                        Destinations.DOCUMENT_REQUEST_DETAIL.replace("{requestId}", requestId)
+                    )
+                }
+            )
+        }
+
+        // --- DOCUMENT REQUEST DETAIL ---
+        composable(
+            route = Destinations.DOCUMENT_REQUEST_DETAIL,
+            arguments = listOf(navArgument("requestId") {
+                type = androidx.navigation.NavType.StringType
+            })
+        ) { backStackEntry ->
+            val requestId = backStackEntry.arguments?.getString("requestId") ?: ""
+            android.util.Log.d("NAV", "Detail screen requestId: $requestId")
+
+            val vm: com.example.esprit.ui.demande.DocumentRequestDetailViewModel = hiltViewModel()
+            com.example.esprit.ui.demande.DocumentRequestDetailScreen(
+                requestId = requestId,
+                viewModel = vm,
+                onBack = { navController.popBackStack() },
+                onViewFile = { fileUrl ->
+                    val encodedUrl = java.net.URLEncoder.encode(fileUrl, "UTF-8")
+                    navController.navigate(
+                        Destinations.DOCUMENT_VIEWER.replace("{fileUrl}", encodedUrl)
+                    )
+                }
+            )
+        }
+
+
+        composable(
+            route = Destinations.DOCUMENT_VIEWER,
+            arguments = listOf(navArgument("fileUrl") {
+                type = androidx.navigation.NavType.StringType
+            })
+        ) { backStackEntry ->
+            val encodedUrl = backStackEntry.arguments?.getString("fileUrl") ?: ""
+            val fileUrl = try {
+                java.net.URLDecoder.decode(encodedUrl, "UTF-8")
+            } catch (e: Exception) {
+                encodedUrl
+            }
+            com.example.esprit.ui.demande.DocumentViewerScreen(
+                fileUrl = fileUrl,
+                onBack = { navController.popBackStack() },
+                onShare = { url ->
+                    // TODO: Implement share functionality
+                }
             )
         }
 
@@ -278,7 +386,7 @@ fun AppNavGraph(
         }
         composable(Destinations.CLUB_NOTIFICATIONS) {
             NotificationsScreen(
-                onNavigateBack = { navController.popBackStack() }
+                navController = navController
             )
         }
         composable(Destinations.CLUB_REQUESTS) {
@@ -418,6 +526,16 @@ fun AppNavGraph(
                         ?.set("refreshPosts", true)
                     navController.popBackStack()
                 }
+            )
+        }
+        composable(
+            route = Destinations.CLUB_POST_DETAIL,
+            arguments = listOf(navArgument("postId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val postId = backStackEntry.arguments?.getString("postId").orEmpty()
+            com.example.esprit.ui.club.screens.PostDetailScreen(
+                postId = postId,
+                onNavigateBack = { navController.popBackStack() }
             )
         }
         composable(Destinations.CLUB_MEMBERS) { MembersListScreen() }

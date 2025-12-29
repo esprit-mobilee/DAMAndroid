@@ -26,7 +26,8 @@ data class ClubHomeUiState(
 @HiltViewModel
 class ClubHomeViewModel @Inject constructor(
     private val repo: ClubRepository,
-    private val notificationsRepo: NotificationsRepository
+    private val notificationsRepo: NotificationsRepository,
+    private val userRepo: com.example.esprit.repository.UserRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ClubHomeUiState(loading = true))
@@ -35,6 +36,18 @@ class ClubHomeViewModel @Inject constructor(
     init {
         Log.d("ClubHomeViewModel", "ViewModel initialized")
         refresh()
+        observeRealTimeNotifications()
+    }
+
+    private fun observeRealTimeNotifications() {
+        viewModelScope.launch {
+            notificationsRepo.notifications.collect {
+                // Increment unread count on new notification
+                _uiState.value = _uiState.value.copy(
+                    unreadCount = _uiState.value.unreadCount + 1
+                )
+            }
+        }
     }
 
     fun refresh() {
@@ -43,6 +56,17 @@ class ClubHomeViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(loading = true, error = null)
 
             try {
+                // 1. Connect Socket
+                try {
+                    val user = userRepo.getMe()
+                    user.id?.let { userId ->
+                        notificationsRepo.connectSocket(userId)
+                    }
+                } catch (e: Exception) {
+                    Log.e("ClubHomeViewModel", "Failed to connect socket: ${e.message}")
+                }
+
+                // 2. Load Club Home
                 val res = repo.home()
                 Log.d("ClubHomeViewModel", "Repository result: $res")
 
@@ -50,17 +74,17 @@ class ClubHomeViewModel @Inject constructor(
                     is UiState.Success<*> -> {
                         val data = res.data as? ClubHomeDto
                         Log.d("ClubHomeViewModel", "Success! Club: ${data?.name}")
-                        _uiState.value = ClubHomeUiState(club = data, loading = false)
+                        _uiState.value = _uiState.value.copy(club = data, loading = false)
                         
-                        data?.let { clubData ->
-                            when (val unreadRes = notificationsRepo.getUnreadCount(clubData.id)) {
-                                is UiState.Success<*> -> {
-                                    _uiState.value = _uiState.value.copy(
-                                        unreadCount = (unreadRes.data as? Map<String, Int>)?.get("unreadCount") ?: 0
-                                    )
-                                }
-                                else -> {}
+                        // 3. Get Unread Count
+                        when (val unreadRes = notificationsRepo.getUnreadCount()) {
+                            is UiState.Success<*> -> {
+                                val count = (unreadRes.data as? com.example.esprit.model.notification.UnreadCountResponse)?.count ?: 0
+                                _uiState.value = _uiState.value.copy(
+                                    unreadCount = count
+                                )
                             }
+                            else -> {}
                         }
                     }
                     is UiState.Error -> {

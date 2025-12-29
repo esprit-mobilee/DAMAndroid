@@ -24,7 +24,8 @@ import com.example.esprit.ui.theme.HeaderBlack
 fun EspritTopBar(
     title: String,
     subtitle: String? = null,
-    onMenuClick: () -> Unit
+    onMenuClick: () -> Unit,
+    actions: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = {}
 ) {
     CenterAlignedTopAppBar(
         title = {
@@ -57,6 +58,7 @@ fun EspritTopBar(
                 )
             }
         },
+        actions = actions,
         colors = androidx.compose.material3.TopAppBarDefaults.centerAlignedTopAppBarColors(
             containerColor = HeaderBlack
         ),
