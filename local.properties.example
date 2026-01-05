@@ -1,0 +1,20 @@
+## This file must *NOT* be checked into Version Control Systems,
+# as it contains information specific to your local configuration.
+#
+# Location of the SDK. This is only used by Gradle.
+# For customization when using a Version Control System, please read the
+# header note.
+#sdk.dir=C:\\Users\\YourUsername\\AppData\\Local\\Android\\Sdk
+
+# API Keys for external services
+# Get your Gemini API key from: https://makersuite.google.com/app/apikey
+GEMINI_API_KEY=YOUR_GEMINI_API_KEY_HERE
+
+# Optional: OpenAI API key (if using OpenAI features)
+OPENAI_API_KEY=YOUR_OPENAI_API_KEY_HERE
+
+# Instructions:
+# 1. Copy this file and rename it to: local.properties
+# 2. Replace YOUR_GEMINI_API_KEY_HERE with your actual Gemini API key
+# 3. Save the file
+# 4. Sync project with Gradle files

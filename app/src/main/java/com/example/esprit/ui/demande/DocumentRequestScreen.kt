@@ -69,6 +69,7 @@ import com.example.esprit.model.DocumentField
 import com.example.esprit.model.DocumentRequestItem
 import com.example.esprit.service.SmartMessage
 import com.example.esprit.ui.demande.components.SmartInfoCard
+import com.example.esprit.ui.demande.components.AIPredictionCard
 import com.example.esprit.util.DateFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -133,6 +134,11 @@ fun DocumentRequestScreen(
             // Smart Tip Banner
             uiState.smartMessage?.let { msg ->
                 SmartInfoCard(message = msg)
+            }
+
+            // AI Prediction Card (NEW!)
+            uiState.aiPrediction?.let { prediction ->
+                AIPredictionCard(prediction = prediction)
             }
 
             // Type Selector with better labels

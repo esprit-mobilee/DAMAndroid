@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import com.example.esprit.service.SmartMessage
 import com.example.esprit.service.SmartPredictionService
+import com.example.esprit.service.PredictionResult
 import javax.inject.Inject
 
 private val SUPPORTED_DOCUMENT_TYPES = listOf("attestation", "relevé", "convention")
@@ -33,7 +34,9 @@ data class DocumentRequestUiState(
     val created: DocumentRequestItem? = null,
     val createdFileUrl: String? = null,
     val estimatedTime: String = "",
-    val smartMessage: SmartMessage? = null
+    val smartMessage: SmartMessage? = null,
+    val aiPrediction: PredictionResult? = null,
+    val isLoadingPrediction: Boolean = false
 )
 
 @HiltViewModel
@@ -47,7 +50,7 @@ class DocumentRequestViewModel @Inject constructor(
     val uiState: StateFlow<DocumentRequestUiState> = _uiState
 
     init {
-        // Load initial smart message
+        // Load initial smart message and AI prediction
         val initialType = _uiState.value.selectedType
         _uiState.update { 
             it.copy(
@@ -56,6 +59,7 @@ class DocumentRequestViewModel @Inject constructor(
             ) 
         }
         loadFields(initialType)
+        loadAIPrediction(initialType)
     }
 
     fun selectType(type: String) {
@@ -72,6 +76,7 @@ class DocumentRequestViewModel @Inject constructor(
             )
         }
         loadFields(type)
+        loadAIPrediction(type)
     }
 
     fun updateFieldValue(name: String, value: String) {
@@ -179,6 +184,23 @@ class DocumentRequestViewModel @Inject constructor(
                         error = e.localizedMessage ?: "Impossible de charger les champs."
                     )
                 }
+            }
+        }
+    }
+
+    private fun loadAIPrediction(type: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingPrediction = true) }
+            try {
+                val prediction = smartPredictionService.getEstimatedProcessingTimeWithDetails(type)
+                _uiState.update { 
+                    it.copy(
+                        aiPrediction = prediction,
+                        isLoadingPrediction = false
+                    ) 
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoadingPrediction = false) }
             }
         }
     }

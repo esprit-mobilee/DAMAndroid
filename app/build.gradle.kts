@@ -23,9 +23,11 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         
-        // API Key from local.properties
-        val apiKey = project.findProperty("OPENAI_API_KEY") as String? ?: ""
-        buildConfigField("String", "OPENAI_API_KEY", "\"$apiKey\"")
+        // API Keys from local.properties
+        val openAiApiKey = project.findProperty("OPENAI_API_KEY") as String? ?: ""
+        val geminiApiKey = project.findProperty("GEMINI_API_KEY") as String? ?: ""
+        buildConfigField("String", "OPENAI_API_KEY", "\"$openAiApiKey\"")
+        buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
     }
 
     buildTypes {
@@ -129,6 +131,9 @@ dependencies {
     implementation("io.socket:socket.io-client:2.1.0") {
         exclude(group = "org.json", module = "json")
     }
+
+    // Google Generative AI (Gemini)
+    implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
 
 }
 
