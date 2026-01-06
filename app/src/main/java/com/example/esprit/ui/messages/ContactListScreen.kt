@@ -82,8 +82,12 @@ fun ContactListScreen(
                                     ?: listOfNotNull(contact.firstName, contact.lastName).joinToString(" ")
                                     .ifEmpty { "Unknown User" }
 
+                                if (contact.id.isNullOrBlank()) {
+                                    return@ContactItem
+                                }
+
                                 val route = Destinations.privateChatRoute(
-                                    partnerId = contact.id ?: "",
+                                    partnerId = contact.id,
                                     name = partnerName
                                 )
                                 navController.navigate(route) {

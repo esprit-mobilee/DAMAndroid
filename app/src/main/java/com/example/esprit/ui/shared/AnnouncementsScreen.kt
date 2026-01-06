@@ -23,6 +23,10 @@ fun AnnouncementsScreen(
     vm: AnnouncementsViewModel = hiltViewModel()
 ) {
     val announcements by vm.announcements.collectAsState()
+    
+    LaunchedEffect(Unit) {
+        vm.refresh()
+    }
 
     var search by remember { mutableStateOf("") }
     var filter by remember { mutableStateOf("Tous") }

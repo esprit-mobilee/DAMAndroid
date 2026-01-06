@@ -53,15 +53,15 @@ fun NotificationBanner(
                 modifier = Modifier
                     .size(40.dp)
                     .background(
-                        notification.type.getColor().copy(alpha = 0.15f),
+                        notification.color.copy(alpha = 0.15f),
                         CircleShape
                     ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    painter = painterResource(notification.type.getIcon()),
+                    painter = painterResource(notification.iconResId),
                     contentDescription = null,
-                    tint = notification.type.getColor(),
+                    tint = notification.color,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -71,7 +71,7 @@ fun NotificationBanner(
             // Content
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = notification.type.getTitle(),
+                    text = notification.typeTitle,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface

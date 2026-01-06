@@ -4,38 +4,26 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-<<<<<<< HEAD
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-=======
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
->>>>>>> origin/messaging-announcement
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
 import com.example.esprit.ui.theme.EspritTheme
 import com.example.esprit.ui.nav.AppNavGraph
-<<<<<<< HEAD
 import com.example.esprit.ui.notifications.AnimatedNotificationBanner
 import com.example.esprit.ui.notifications.NotificationsViewModel
-=======
->>>>>>> origin/messaging-announcement
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-<<<<<<< HEAD
     private val notificationsViewModel: NotificationsViewModel by viewModels()
     
-=======
->>>>>>> origin/messaging-announcement
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
@@ -44,7 +32,6 @@ class MainActivity : ComponentActivity() {
                 setContent {
                     EspritTheme {
                         val navController = rememberNavController()
-<<<<<<< HEAD
                         val showBanner by notificationsViewModel.showBanner.collectAsState()
                         
                         Box {
@@ -64,9 +51,6 @@ class MainActivity : ComponentActivity() {
                                 modifier = Modifier.align(Alignment.TopCenter)
                             )
                         }
-=======
-                        AppNavGraph(navController = navController)
->>>>>>> origin/messaging-announcement
                     }
                 }
             } else {

@@ -10,6 +10,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.Orientation
@@ -34,13 +35,19 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.Reply
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -86,6 +93,9 @@ fun ChatScreen(
     val translations by viewModel.translations.collectAsState()
     var messageText by remember { mutableStateOf("") }
     var replyingTo by remember { mutableStateOf<MessageDto?>(null) }
+    
+    val summary by viewModel.summary.collectAsState()
+    val isLoadingSummary by viewModel.isLoadingSummary.collectAsState()
     
     // Edit dialog state
     var messageToEdit by remember { mutableStateOf<MessageDto?>(null) }
@@ -195,6 +205,30 @@ fun ChatScreen(
                             )
                         }
                     }
+                    if (partnerId != null) {
+                        IconButton(onClick = { viewModel.sendGoogleMeetLink() }) {
+                            Icon(
+                                imageVector = Icons.Default.Videocam,
+                                contentDescription = "Video Call",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        IconButton(onClick = { viewModel.summarizeChat() }) {
+                            if (isLoadingSummary) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.AutoAwesome,
+                                    contentDescription = "Summarize",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
                     IconButton(onClick = { /* Menu */ }) {
                         Icon(Icons.Default.MoreVert, contentDescription = "Menu")
                     }
@@ -231,7 +265,9 @@ fun ChatScreen(
 
                         onReply = { replyingTo = message },
                         onTranslate = { lang -> viewModel.translateMessage(message.id, lang) },
-                        translatedText = translations[message.id]
+                        translatedText = translations[message.id],
+                        onMarkAsRead = { viewModel.markAsRead(message.id) },
+                        currentUserId = currentUser?.id
                     )
                 }
                 if (isTyping) {
@@ -323,6 +359,29 @@ fun ChatScreen(
                 }
             )
         }
+        
+        // AI Summary Alert
+        if (summary != null) {
+            AlertDialog(
+                onDismissRequest = { viewModel.clearSummary() },
+                title = { 
+                    Text(
+                        "AI Chat Summary",
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    ) 
+                },
+                text = { Text(summary!!) },
+                confirmButton = {
+                    Button(
+                        onClick = { viewModel.clearSummary() },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    ) {
+                        Text("Awesome")
+                    }
+                }
+            )
+        }
     }
 }
 
@@ -336,12 +395,27 @@ fun MessageItem(
 
     onReply: () -> Unit,
     onTranslate: (String) -> Unit,
-    translatedText: String? = null
+    translatedText: String? = null,
+    onMarkAsRead: () -> Unit,
+    currentUserId: String?
 ) {
     val alignment = if (isMe) Alignment.End else Alignment.Start
     val boxAlignment = if (isMe) Alignment.CenterEnd else Alignment.CenterStart
-    val bubbleColor = if (isMe) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
-    val textColor = if (isMe) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+    
+    // Premium Palettes
+    val meGradient = Brush.linearGradient(
+        colors = listOf(Color(0xFFD9352A), Color(0xFFC22B20))
+    )
+    val partnerColor = MaterialTheme.colorScheme.surface
+    val partnerBorder = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+    
+    val textColor = if (isMe) Color.White else MaterialTheme.colorScheme.onSurface
+    
+    val bubbleShape = if (isMe) {
+        RoundedCornerShape(16.dp, 16.dp, 2.dp, 16.dp)
+    } else {
+        RoundedCornerShape(16.dp, 16.dp, 16.dp, 2.dp)
+    }
     
     var showMenu by remember { mutableStateOf(false) }
     var showTranslationDialog by remember { mutableStateOf(false) }
@@ -351,6 +425,16 @@ fun MessageItem(
     val swipeOffset = remember { Animatable(0f) }
     val density = LocalDensity.current
     val coroutineScope = rememberCoroutineScope()
+
+    // Mark as read side-effect
+    LaunchedEffect(message.id) {
+        if (!isMe && currentUserId != null) {
+            val alreadyRead = message.readBy.any { it.userId == currentUserId }
+            if (!alreadyRead) {
+                onMarkAsRead()
+            }
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -407,8 +491,9 @@ fun MessageItem(
                      if (!isMe) {
                          val baseUrl = com.example.esprit.util.Constants.BASE_URL.replace(Regex("/+$"), "")
                          val avatarUrl = message.senderId.imageUrl
-                         val fullAvatarUrl = if (avatarUrl != null) {
-                             if (avatarUrl.startsWith("http")) {
+                         
+                         if (avatarUrl != null && avatarUrl.isNotBlank()) {
+                             val fullAvatarUrl = if (avatarUrl.startsWith("http")) {
                                  avatarUrl
                              } else {
                                  val relativePath = avatarUrl.replace(Regex("^/+"), "")
@@ -418,31 +503,57 @@ fun MessageItem(
                                      "$baseUrl/$relativePath"
                                  }
                              }
-                         } else "https://via.placeholder.com/40"
-
-                         AsyncImage(
-                             model = fullAvatarUrl,
-                             contentDescription = null,
-                             modifier = Modifier
-                                 .size(32.dp)
-                                 .clip(CircleShape)
-                                 .background(Color.Gray)
-                         )
+                             
+                             AsyncImage(
+                                 model = fullAvatarUrl,
+                                 contentDescription = null,
+                                 modifier = Modifier
+                                     .size(32.dp)
+                                     .clip(CircleShape)
+                                     .background(Color.Gray)
+                             )
+                         } else {
+                             // Fallback: Initials
+                             val initial = (message.senderId.firstName?.take(1) ?: message.senderId.lastName?.take(1) ?: "?").uppercase()
+                             Box(
+                                 contentAlignment = Alignment.Center,
+                                 modifier = Modifier
+                                     .size(32.dp)
+                                     .clip(CircleShape)
+                                     .background(MaterialTheme.colorScheme.primaryContainer)
+                             ) {
+                                 Text(
+                                     text = initial,
+                                     fontWeight = FontWeight.Bold,
+                                     fontSize = 14.sp,
+                                     color = MaterialTheme.colorScheme.onPrimaryContainer
+                                 )
+                             }
+                         }
                          Spacer(modifier = Modifier.width(8.dp))
                      }
 
-             Box {
-                 Surface(
-                     shape = RoundedCornerShape(12.dp),
-                     color = bubbleColor,
-                     modifier = Modifier
-                         .widthIn(max = 280.dp)
-                         .pointerInput(Unit) {
-                             detectTapGestures(
-                                 onLongPress = { showMenu = true }
-                             )
-                         }
-                 ) {
+              Box(
+                  modifier = Modifier
+                      .widthIn(max = 300.dp)
+                      .shadow(
+                          elevation = if (isMe) 6.dp else 2.dp,
+                          shape = bubbleShape,
+                          clip = false
+                      )
+                      .clip(bubbleShape)
+                      .then(
+                          if (isMe) Modifier.background(meGradient)
+                          else Modifier
+                              .background(partnerColor)
+                              .border(1.dp, partnerBorder, bubbleShape)
+                      )
+                      .pointerInput(Unit) {
+                          detectTapGestures(
+                              onLongPress = { showMenu = true }
+                          )
+                      }
+              ) {
                      Column(modifier = Modifier.padding(12.dp)) {
                          // Reply Context
                          if (message.replyTo != null) {
@@ -484,14 +595,14 @@ fun MessageItem(
                              )
                          } else {
                              if (message.type == "IMAGE" && message.attachmentUrl != null) {
-                                 val baseUrl = com.example.esprit.util.Constants.BASE_URL.replace(Regex("/+$"), "")
-                                 val relativePath = message.attachmentUrl.replace(Regex("^/+"), "")
+                                 val baseUrl = com.example.esprit.util.Constants.BASE_URL
                                  val fullUrl = if (message.attachmentUrl.startsWith("http")) {
                                      message.attachmentUrl
-                                 } else if (baseUrl.endsWith("/api") && relativePath.startsWith("api/")) {
-                                     "${baseUrl.removeSuffix("/api")}/$relativePath"
                                  } else {
-                                     "$baseUrl/$relativePath"
+                                     // Ensure no double slash
+                                     val cleanBase = baseUrl.replace(Regex("/$"), "")
+                                     val cleanPath = message.attachmentUrl.replace(Regex("^/"), "")
+                                     "$cleanBase/$cleanPath"
                                  }
                                  
                                  AsyncImage(
@@ -508,14 +619,13 @@ fun MessageItem(
                                      Text(text = message.content, color = textColor)
                                  }
                              } else if (message.type == "VOICE" && message.attachmentUrl != null) {
-                                 val baseUrl = com.example.esprit.util.Constants.BASE_URL.replace(Regex("/+$"), "")
-                                 val relativePath = message.attachmentUrl.replace(Regex("^/+"), "")
+                                 val baseUrl = com.example.esprit.util.Constants.BASE_URL
                                  val fullUrl = if (message.attachmentUrl.startsWith("http")) {
-                                     message.attachmentUrl 
-                                 } else if (baseUrl.endsWith("/api") && relativePath.startsWith("api/")) {
-                                     "${baseUrl.removeSuffix("/api")}/$relativePath"
+                                     message.attachmentUrl
                                  } else {
-                                     "$baseUrl/$relativePath"
+                                     val cleanBase = baseUrl.replace(Regex("/$"), "")
+                                     val cleanPath = message.attachmentUrl.replace(Regex("^/"), "")
+                                     "$cleanBase/$cleanPath"
                                  }
                                  
                                  VoiceMessagePlayer(url = fullUrl, isMe = isMe, textColor = textColor)
@@ -568,6 +678,16 @@ fun MessageItem(
                                 color = textColor.copy(alpha = 0.7f),
                                 style = MaterialTheme.typography.labelSmall
                             )
+                            if (isMe) {
+                                Spacer(modifier = Modifier.width(4.dp))
+                                val isSeen = message.readBy.isNotEmpty()
+                                Icon(
+                                    imageVector = if (isSeen) Icons.Default.DoneAll else Icons.Default.Done,
+                                    contentDescription = if (isSeen) "Seen" else "Sent",
+                                    tint = if (isSeen) Color(0xFF2196F3) else textColor.copy(alpha = 0.7f), // Blue if seen
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -701,16 +821,17 @@ fun MessageItem(
                      }
                  }
              }
-        }
-    }
     }
 }
-
+}
 @Composable
 fun VoiceMessagePlayer(url: String, isMe: Boolean, textColor: Color) {
     var isPlaying by remember { mutableStateOf(false) }
     var progress by remember { mutableStateOf(0f) }
-    val waveform = remember { List(20) { (10..40).random().dp } }
+    val waveform = remember { List(25) { (6..32).random().dp } } // More bars, controlled range
+    
+    val activeBarColor = if (isMe) Color.White else MaterialTheme.colorScheme.primary
+    val inactiveBarColor = activeBarColor.copy(alpha = 0.3f)
     
     LaunchedEffect(isPlaying) {
         if (isPlaying) {
@@ -740,34 +861,44 @@ fun VoiceMessagePlayer(url: String, isMe: Boolean, textColor: Color) {
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(vertical = 4.dp)
+        modifier = Modifier
+            .padding(vertical = 4.dp)
+            .fillMaxWidth()
     ) {
-        IconButton(
-            onClick = { isPlaying = !isPlaying },
-            modifier = Modifier.size(32.dp)
+        Surface(
+            shape = CircleShape,
+            color = activeBarColor.copy(alpha = 0.1f),
+            modifier = Modifier.size(36.dp)
         ) {
-            Icon(
-                imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                contentDescription = "Play",
-                tint = textColor
-            )
+            IconButton(
+                onClick = { isPlaying = !isPlaying },
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Icon(
+                    imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    contentDescription = if (isPlaying) "Pause" else "Play",
+                    tint = activeBarColor,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
         }
-        Spacer(modifier = Modifier.width(8.dp))
+        
+        Spacer(modifier = Modifier.width(12.dp))
         
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
-            modifier = Modifier.height(40.dp)
+            horizontalArrangement = Arrangement.spacedBy(3.dp),
+            modifier = Modifier.weight(1f)
         ) {
             waveform.forEachIndexed { index, height ->
                 val isPlayed = (index.toFloat() / waveform.size.toFloat()) < progress
-                val barColor = if (isPlayed) textColor else textColor.copy(alpha = 0.5f)
+                val color = if (isPlayed) activeBarColor else inactiveBarColor
                 
                 Box(
                     modifier = Modifier
-                        .width(3.dp)
+                        .width(2.5.dp)
                         .height(height)
-                        .background(barColor, RoundedCornerShape(2.dp))
+                        .background(color, RoundedCornerShape(2.dp))
                 )
             }
         }
@@ -784,11 +915,18 @@ fun ChatInput(
     replyingTo: MessageDto?,
     onCancelReply: () -> Unit
 ) {
-    Surface(
-        color = MaterialTheme.colorScheme.surface,
-        tonalElevation = 2.dp,
-        modifier = Modifier.fillMaxWidth()
+    Box(
+        modifier = Modifier
+            .padding(16.dp)
+            .fillMaxWidth()
     ) {
+        Surface(
+            shape = RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp,
+            shadowElevation = 8.dp,
+            modifier = Modifier.fillMaxWidth()
+        ) {
         Column {
             if (replyingTo != null) {
                 Surface(
@@ -851,12 +989,12 @@ fun ChatInput(
                     Icon(
                         imageVector = Icons.Default.Mic,
                         contentDescription = null,
-                        tint = Color.Red,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(end = 8.dp)
                     )
                     Text(
                         text = "Recording... ${String.format("%02d:%02d", recordingTime / 60, recordingTime % 60)}",
-                        color = Color.Red,
+                        color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.weight(1f)
                     )
@@ -870,8 +1008,10 @@ fun ChatInput(
                         onValueChange = onValueChange,
                         placeholder = { Text("Type a message...") },
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(24.dp),
                         colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            disabledContainerColor = Color.Transparent,
                             focusedIndicatorColor = Color.Transparent,
                             unfocusedIndicatorColor = Color.Transparent
                         )
@@ -930,20 +1070,21 @@ fun ChatInput(
                                     }
                                 )
                             }
-                            .background(if(isRecording) Color.Red.copy(alpha=0.1f) else Color.Transparent)
-                            .scale(if(isRecording) 1.2f else 1f),
+                            .background(if (isRecording) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else Color.Transparent)
+                            .scale(if (isRecording) 1.2f else 1f),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Mic,
                             contentDescription = "Record",
-                            tint = if (isRecording) Color.Red else MaterialTheme.colorScheme.secondary
+                            tint = if (isRecording) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary
                         )
-                    }
                 }
             }
         }
     }
+}
+}
 }
 
 fun uriToFile(context: android.content.Context, uri: Uri): File? {
@@ -968,3 +1109,4 @@ fun formatTime(dateString: String): String {
         ""
     }
 }
+

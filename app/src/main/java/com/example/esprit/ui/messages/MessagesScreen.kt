@@ -1,8 +1,9 @@
 package com.example.esprit.ui.messages
 
-import com.example.esprit.ui.messages.MessagesViewModel
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import com.example.esprit.ui.messages.MessagesViewModel
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -26,8 +27,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.example.esprit.model.chat.ConversationDto
+
 import com.example.esprit.ui.nav.Destinations
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -183,8 +185,9 @@ fun SearchBarPlaceholder() {
     }
 }
 
+
 @Composable
-fun ActiveUsersRow(conversations: List<ConversationDto>) {
+fun ActiveUsersRow(conversations: List<ConversationUi>) {
     // Filter for online users (mock logic or real if isOnline is accurate)
     val onlineUsers = conversations.filter { it.partner.isOnline }
     
@@ -233,9 +236,10 @@ fun ActiveUsersRow(conversations: List<ConversationDto>) {
     }
 }
 
+
 @Composable
 fun ConversationItem(
-    conversation: ConversationDto,
+    conversation: ConversationUi,
     onClick: () -> Unit
 ) {
     val fname = conversation.partner.firstName ?: ""
@@ -246,13 +250,23 @@ fun ConversationItem(
         "$fname $lname".trim()
     }
     
-    val isUnread = false // TODO: Add unread boolean to DTO
+
+    
+
+    
+    val isUnread = conversation.unreadCount > 0
+    
+    // Debug: Log the raw timestamp
+    android.util.Log.d("MessagesScreen", "Raw timestamp: ${conversation.lastMessage.createdAt}")
+    val formattedTime = formatRelativeTime(conversation.lastMessage.createdAt)
+    android.util.Log.d("MessagesScreen", "Formatted time: $formattedTime")
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .background(if (isUnread) MaterialTheme.colorScheme.primary.copy(alpha = 0.05f) else Color.Transparent)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Avatar
@@ -287,35 +301,109 @@ fun ConversationItem(
 
         // Content
         Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = displayName,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = if (isUnread) FontWeight.Bold else FontWeight.Medium // Bold if unread
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = displayName,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = if (isUnread) FontWeight.Bold else FontWeight.Medium // Bold if unread
+                )
+                Text(
+                    text = formattedTime,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (isUnread) Color.Black else Color.Gray,
+                    fontWeight = if (isUnread) FontWeight.Bold else FontWeight.Normal
+                )
+            }
+            
             Spacer(modifier = Modifier.height(2.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = conversation.lastMessage.content,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = if (isUnread) MaterialTheme.colorScheme.onSurface else Color.Gray,
+                    color = if (isUnread) Color.Black else Color.Gray,
                     maxLines = 1,
-                    fontWeight = if (isUnread) FontWeight.Bold else FontWeight.Normal
+                    fontWeight = if (isUnread) FontWeight.Bold else FontWeight.Normal,
+                    modifier = Modifier.weight(1f, fill = false)
                 )
-                Text(
-                    text = " · ${conversation.lastMessage.createdAt.take(10)}", // Formatting needed
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.Gray
-                )
+                if (isUnread) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(12.dp)
+                            .background(MaterialTheme.colorScheme.primary, CircleShape)
+                    )
+                }
             }
         }
         
-        // Interaction Status / Unread Dot
-        if (isUnread) {
-             Box(
-                modifier = Modifier
-                    .size(12.dp)
-                    .background(MaterialTheme.colorScheme.primary, CircleShape)
-            )
+
+    }
+}
+
+fun formatRelativeTime(isoString: String): String {
+    try {
+        if (isoString.isBlank()) return "now"
+        
+        android.util.Log.d("MessagesScreen", "Attempting to parse: $isoString")
+        
+        // Try multiple date format patterns
+        val patterns = listOf(
+            "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+            "yyyy-MM-dd'T'HH:mm:ss'Z'",
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'",
+            "yyyy-MM-dd'T'HH:mm:ss"
+        )
+        
+        var date: java.util.Date? = null
+        for (pattern in patterns) {
+            try {
+                val sdf = java.text.SimpleDateFormat(pattern, java.util.Locale.US)
+                sdf.timeZone = java.util.TimeZone.getTimeZone("UTC")
+                date = sdf.parse(isoString)
+                if (date != null) {
+                    android.util.Log.d("MessagesScreen", "Successfully parsed with pattern: $pattern")
+                    break
+                }
+            } catch (e: Exception) {
+                // Try next pattern
+                continue
+            }
         }
+        
+        if (date == null) {
+            android.util.Log.e("MessagesScreen", "Failed to parse timestamp with any pattern: $isoString")
+            return "· now"
+        }
+        
+        val now = System.currentTimeMillis()
+        val timestamp = date.time
+        val diff = now - timestamp
+        
+        val minutes = diff / (1000 * 60)
+        val hours = diff / (1000 * 60 * 60)
+        val days = diff / (1000 * 60 * 60 * 24)
+        
+        val result = when {
+            minutes < 1 -> "now"
+            minutes < 60 -> "${minutes} min"
+            hours < 24 -> "${hours} h"
+            days < 7 -> "${days} d"
+            else -> {
+                // For older messages, show actual date
+                val formatter = java.text.SimpleDateFormat("MMM d", java.util.Locale.US)
+                formatter.format(date)
+            }
+        }
+        
+        android.util.Log.d("MessagesScreen", "Formatted result: $result")
+        return result
+        
+    } catch (e: Exception) {
+        android.util.Log.e("MessagesScreen", "Error in formatRelativeTime", e)
+        return "· now"
     }
 }

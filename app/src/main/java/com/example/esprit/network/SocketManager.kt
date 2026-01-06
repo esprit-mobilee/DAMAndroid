@@ -83,6 +83,42 @@ class SocketManager @Inject constructor(
                 }
             }
 
+            socket?.on("privateMessage") { args ->
+                try {
+                    if (args.isNotEmpty()) {
+                        val data = args[0] as JSONObject
+                        Log.d("SocketManager", "📩 Received privateMessage: $data")
+
+                        // HOTFIX: Handle if senderId is just a String (ID) instead of Object
+                        val senderIdObj = data.optJSONObject("senderId")
+                        val senderIdStr = data.optString("senderId")
+
+                        val message: MessageDto = if (senderIdObj == null && senderIdStr.isNotEmpty()) {
+                            // It's a string, we need to construct a partial MessageDto manually or fix JSON
+                            Log.w("SocketManager", "⚠️ senderId is a String ($senderIdStr), constructing partial DTO")
+                            
+                            // Remove senderId from JSON to avoid Gson error, then populate manually?
+                            // Easier: Manual parsing or Gson with modified JSON
+                            // Let's modify JSON to make senderId an object
+                            val fixedSender = JSONObject()
+                            fixedSender.put("_id", senderIdStr)
+                            fixedSender.put("firstName", "Utilisateur") // Placeholder
+                            fixedSender.put("lastName", "")
+                            
+                            data.put("senderId", fixedSender)
+                            gson.fromJson(data.toString(), MessageDto::class.java)
+                        } else {
+                            gson.fromJson(data.toString(), MessageDto::class.java)
+                        }
+
+                        _messages.tryEmit(message)
+                    }
+                } catch (e: Exception) {
+                    Log.e("SocketManager", "❌ Error parsing privateMessage", e)
+                    e.printStackTrace()
+                }
+            }
+
             socket?.on("typingStatus") { args ->
                 try {
                     if (args.isNotEmpty()) {

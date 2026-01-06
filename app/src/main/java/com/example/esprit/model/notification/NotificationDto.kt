@@ -1,6 +1,5 @@
 package com.example.esprit.model.notification
 
-<<<<<<< HEAD
 import androidx.compose.ui.graphics.Color
 import com.example.esprit.R
 import com.google.gson.annotations.SerializedName
@@ -13,14 +12,17 @@ import java.util.*
 data class Notification(
     @SerializedName("_id")
     val id: String,
-    val type: NotificationType,
+    @SerializedName("type")
+    val type: NotificationType? = null,
     val message: String,
     val read: Boolean,
     val createdAt: String,
     val updatedAt: String? = null,
     
     // User who triggered the notification (optional)
-    val userId: String? = null,
+    // Using Any? because backend might return populated object or just ID string
+    @SerializedName("userId")
+    private val _userId: Any? = null,
     
     // Related entities (optional based on type)
     // Using Any? because backend might return populated object or just ID string
@@ -40,7 +42,10 @@ data class Notification(
     private val _commentId: Any? = null,
     
     @SerializedName("eventId")
-    private val _eventId: Any? = null
+    private val _eventId: Any? = null,
+
+    @SerializedName("sender")
+    private val _sender: Any? = null
 ) {
     // Helper to extract ID from String or Map
     private fun extractId(value: Any?): String? {
@@ -51,12 +56,21 @@ data class Notification(
         }
     }
 
+    val userId: String? get() = extractId(_userId)
     val clubId: String? get() = extractId(_clubId)
     val internshipOfferId: String? get() = extractId(_internshipOfferId)
     val applicationId: String? get() = extractId(_applicationId)
     val postId: String? get() = extractId(_postId)
     val commentId: String? get() = extractId(_commentId)
     val eventId: String? get() = extractId(_eventId)
+    val senderId: String? get() = extractId(_sender)
+
+    val safeType: NotificationType get() = type ?: NotificationType.NEW_MESSAGE
+
+    val iconResId: Int get() = safeType.getIcon()
+    val color: Color get() = safeType.getColor()
+    val typeTitle: String get() = safeType.getTitle()
+
     /**
      * Calculate relative time (e.g., "Il y a 5 min")
      */
@@ -82,16 +96,18 @@ data class Notification(
      * Get navigation route for this notification
      */
     fun getNavigationRoute(): String {
-        return when (type) {
+        return when (safeType) {
             NotificationType.INTERNSHIP_CREATED,
             NotificationType.INTERNSHIP_UPDATED,
             NotificationType.INTERNSHIP_DELETED -> 
-                "internship_detail/$internshipOfferId"
+                "internships/details/$internshipOfferId"
             
-            NotificationType.APPLICATION_SUBMITTED,
+            NotificationType.APPLICATION_SUBMITTED -> 
+                if (applicationId != null) "admin/applications/$applicationId" else "admin/applications"
+                
             NotificationType.APPLICATION_ACCEPTED,
             NotificationType.APPLICATION_REJECTED -> 
-                if (applicationId != null) "application_detail/$applicationId" else "applications"
+                if (applicationId != null) "student/applications/$applicationId" else "student/applications"
             
             NotificationType.CLUB_POST_CREATED,
             NotificationType.POST_LIKED,
@@ -109,9 +125,18 @@ data class Notification(
             NotificationType.CLUB_EVENT_CREATED -> 
                 if (eventId != null) "club/events/detail/$eventId" else "club/events"
             
-            NotificationType.JOIN_REQUEST,
+            NotificationType.JOIN_REQUEST -> 
+                "club/requests"
+                
             NotificationType.EVENT_REGISTRATION -> 
-                if (clubId != null) "club_detail/$clubId" else "clubs"
+                if (eventId != null) "club/events/detail/$eventId" else "club/events"
+
+            NotificationType.PRIVATE_MESSAGE,
+            NotificationType.NEW_MESSAGE ->
+                if (senderId != null) "chat/private/$senderId?name=Chat" else "messages"
+
+            NotificationType.CLUB_MESSAGE ->
+                if (clubId != null) "club/chat/$clubId?name=Chat" else "messages"
         }
     }
 }
@@ -163,7 +188,16 @@ enum class NotificationType {
     POST_DISLIKED,
     
     @SerializedName("post_commented")
-    POST_COMMENTED;
+    POST_COMMENTED,
+
+    @SerializedName("private_message")
+    PRIVATE_MESSAGE,
+
+    @SerializedName("club_message")
+    CLUB_MESSAGE,
+
+    @SerializedName("new_message")
+    NEW_MESSAGE;
     
     /**
      * Get icon resource for this notification type
@@ -179,6 +213,7 @@ enum class NotificationType {
             POST_DISLIKED -> R.drawable.ic_favorite // You might want a broken heart or dislike icon
             COMMENT_REPLIED, POST_COMMENTED -> R.drawable.ic_comment
             JOIN_REQUEST -> R.drawable.ic_person_add
+            PRIVATE_MESSAGE, CLUB_MESSAGE, NEW_MESSAGE -> R.drawable.ic_comment
         }
     }
     
@@ -199,6 +234,8 @@ enum class NotificationType {
             POST_DISLIKED -> Color(0xFF757575) // Grey for dislike
             COMMENT_REPLIED, POST_COMMENTED -> Color(0xFF00BCD4) // Cyan
             JOIN_REQUEST -> Color(0xFF673AB7) // Deep Purple
+            PRIVATE_MESSAGE, NEW_MESSAGE -> Color(0xFF4CAF50) // Green
+            CLUB_MESSAGE -> Color(0xFF2196F3) // Blue
         }
     }
     
@@ -222,6 +259,8 @@ enum class NotificationType {
             POST_LIKED -> "Publication aimée"
             POST_DISLIKED -> "Réaction négative"
             POST_COMMENTED -> "Nouveau commentaire"
+            PRIVATE_MESSAGE, NEW_MESSAGE -> "Nouveau message"
+            CLUB_MESSAGE -> "Nouveau message de club"
         }
     }
 }
@@ -231,26 +270,4 @@ enum class NotificationType {
  */
 data class UnreadCountResponse(
     val count: Int
-=======
-import com.google.gson.annotations.SerializedName
-
-data class NotificationDto(
-    @SerializedName("id", alternate = ["_id"])
-    val id: String,
-    val clubId: String,
-    val type: String,
-    val userId: NotificationUserDto,
-    val message: String,
-    val read: Boolean,
-    val createdAt: String
-)
-
-data class NotificationUserDto(
-    @SerializedName("id", alternate = ["_id"])
-    val id: String,
-    val firstName: String,
-    val lastName: String,
-    val identifiant: String,
-    val avatar: String? = null
->>>>>>> origin/messaging-announcement
 )

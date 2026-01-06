@@ -26,12 +26,8 @@ data class ClubHomeUiState(
 @HiltViewModel
 class ClubHomeViewModel @Inject constructor(
     private val repo: ClubRepository,
-<<<<<<< HEAD
     private val notificationsRepo: NotificationsRepository,
     private val userRepo: com.example.esprit.repository.UserRepository
-=======
-    private val notificationsRepo: NotificationsRepository
->>>>>>> origin/messaging-announcement
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ClubHomeUiState(loading = true))
@@ -40,7 +36,6 @@ class ClubHomeViewModel @Inject constructor(
     init {
         Log.d("ClubHomeViewModel", "ViewModel initialized")
         refresh()
-<<<<<<< HEAD
         observeRealTimeNotifications()
     }
 
@@ -53,8 +48,6 @@ class ClubHomeViewModel @Inject constructor(
                 )
             }
         }
-=======
->>>>>>> origin/messaging-announcement
     }
 
     fun refresh() {
@@ -63,7 +56,6 @@ class ClubHomeViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(loading = true, error = null)
 
             try {
-<<<<<<< HEAD
                 // 1. Connect Socket
                 try {
                     val user = userRepo.getMe()
@@ -75,8 +67,6 @@ class ClubHomeViewModel @Inject constructor(
                 }
 
                 // 2. Load Club Home
-=======
->>>>>>> origin/messaging-announcement
                 val res = repo.home()
                 Log.d("ClubHomeViewModel", "Repository result: $res")
 
@@ -84,7 +74,6 @@ class ClubHomeViewModel @Inject constructor(
                     is UiState.Success<*> -> {
                         val data = res.data as? ClubHomeDto
                         Log.d("ClubHomeViewModel", "Success! Club: ${data?.name}")
-<<<<<<< HEAD
                         _uiState.value = _uiState.value.copy(club = data, loading = false)
                         
                         // 3. Get Unread Count
@@ -96,19 +85,6 @@ class ClubHomeViewModel @Inject constructor(
                                 )
                             }
                             else -> {}
-=======
-                        _uiState.value = ClubHomeUiState(club = data, loading = false)
-                        
-                        data?.let { clubData ->
-                            when (val unreadRes = notificationsRepo.getUnreadCount(clubData.id)) {
-                                is UiState.Success<*> -> {
-                                    _uiState.value = _uiState.value.copy(
-                                        unreadCount = (unreadRes.data as? Map<String, Int>)?.get("unreadCount") ?: 0
-                                    )
-                                }
-                                else -> {}
-                            }
->>>>>>> origin/messaging-announcement
                         }
                     }
                     is UiState.Error -> {

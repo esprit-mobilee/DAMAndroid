@@ -3,7 +3,8 @@ package com.example.esprit.ui.messages
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.esprit.model.User
-import com.example.esprit.network.ApiService
+import com.example.esprit.repository.ChatRepository
+import com.example.esprit.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,7 +13,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ContactListViewModel @Inject constructor(
-    private val apiService: ApiService
+    private val chatRepository: ChatRepository,
+    private val userRepository: UserRepository
 ) : ViewModel() {
 
     private val _contacts = MutableStateFlow<List<User>>(emptyList())
@@ -32,49 +34,11 @@ class ContactListViewModel @Inject constructor(
             _isLoading.value = true
             try {
                 // Fetch current user ID to exclude self
-                val me = apiService.getMe()
+                val me = userRepository.getMe()
                 _currentUserId.value = me.id
 
-                val allClubs = apiService.getAllClubs()
-                val myClubs = allClubs.filter {
-                    it.membershipStatus == "MEMBER" || it.membershipStatus == "PRESIDENT"
-                }
-
-                val memberMap = mutableMapOf<String, User>()
-
-                myClubs.forEach { club ->
-                    val members = if (!club.members.isNullOrEmpty()) {
-                        club.members
-                    } else {
-                        try {
-                            apiService.getClubMembers(club.id)
-                        } catch (e: Exception) {
-                            emptyList()
-                        }
-                    }
-
-                    members?.forEach { memberDto ->
-                        if (memberDto.id != me.id && !memberMap.containsKey(memberDto.id)) {
-                            // Split name into first/last
-                            val parts = memberDto.name.split(" ", limit = 2)
-                            val fName = parts.getOrNull(0) ?: ""
-                            val lName = parts.getOrNull(1) ?: ""
-
-                            val user = User(
-                                id = memberDto.id,
-                                name = memberDto.name,
-                                firstName = fName,
-                                lastName = lName,
-                                role = memberDto.role,
-                                email = null, // Email might not be in ClubMemberDto
-                                isOnline = false // Status not available in member list usually
-                            )
-                            memberMap[memberDto.id] = user
-                        }
-                    }
-                }
-
-                _contacts.value = memberMap.values.sortedBy { it.name }
+                val result = chatRepository.getContacts(me.id ?: "")
+                _contacts.value = result.getOrElse { emptyList() }
 
             } catch (e: Exception) {
                 e.printStackTrace()

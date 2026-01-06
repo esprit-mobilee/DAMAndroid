@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-package com.example.esprit.di
-
-=======
 package com.example.esprit.di
 
 
@@ -36,4 +32,3 @@ object RepositoryModule {
         AiRepository(api)
 
 }
->>>>>>> origin/messaging-announcement

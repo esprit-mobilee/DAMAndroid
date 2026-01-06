@@ -24,12 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
-<<<<<<< HEAD
 import androidx.compose.ui.res.painterResource
 import com.example.esprit.model.notification.Notification
-=======
-import com.example.esprit.model.notification.NotificationDto
->>>>>>> origin/messaging-announcement
 import com.example.esprit.ui.club.NotificationsViewModel
 import com.example.esprit.util.Constants
 import java.text.SimpleDateFormat
@@ -39,10 +35,7 @@ import java.util.*
 @Composable
 fun NotificationsScreen(
     onNavigateBack: () -> Unit,
-<<<<<<< HEAD
     navController: androidx.navigation.NavController,
-=======
->>>>>>> origin/messaging-announcement
     viewModel: NotificationsViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -88,7 +81,6 @@ fun NotificationsScreen(
                     items(state.notifications) { notification ->
                         NotificationItem(
                             notification = notification,
-<<<<<<< HEAD
                             onClick = {
                                 viewModel.markAsRead(notification)
                                 
@@ -107,9 +99,6 @@ fun NotificationsScreen(
                                     }
                                 }
                             },
-=======
-                            onClick = { viewModel.markAsRead(notification) },
->>>>>>> origin/messaging-announcement
                             onDelete = { viewModel.delete(notification.id) }
                         )
                         Divider()
@@ -124,11 +113,7 @@ fun NotificationsScreen(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .padding(16.dp)
-<<<<<<< HEAD
                     )
-=======
-                )
->>>>>>> origin/messaging-announcement
             }
         }
     }
@@ -136,23 +121,15 @@ fun NotificationsScreen(
 
 @Composable
 fun NotificationItem(
-<<<<<<< HEAD
     notification: Notification,
     onClick: () -> Unit,
     onDelete: () -> Unit
 ) {
     // ... existing implementation ...
-=======
-    notification: NotificationDto,
-    onClick: () -> Unit,
-    onDelete: () -> Unit
-) {
->>>>>>> origin/messaging-announcement
     val backgroundColor = if (notification.read) Color.Transparent else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.1f)
 
     Row(
         modifier = Modifier
-<<<<<<< HEAD
         .fillMaxWidth()
         .background(backgroundColor)
         .clickable(onClick = onClick)
@@ -161,35 +138,14 @@ fun NotificationItem(
     ) {
         // Type Icon
         Icon(
-            painter = painterResource(id = notification.type.getIcon()),
+            painter = painterResource(id = notification.iconResId),
             contentDescription = null,
             modifier = Modifier
                 .size(40.dp)
                 .clip(CircleShape)
-                .background(notification.type.getColor().copy(alpha = 0.1f))
+                .background(notification.color.copy(alpha = 0.1f))
                 .padding(8.dp),
-            tint = notification.type.getColor()
-=======
-            .fillMaxWidth()
-            .background(backgroundColor)
-            .clickable(onClick = onClick)
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Avatar
-        AsyncImage(
-            model = if (notification.userId.avatar?.startsWith("http") == true) {
-                notification.userId.avatar
-            } else {
-                "${Constants.BASE_URL}${notification.userId.avatar}"
-            },
-            contentDescription = null,
-            modifier = Modifier
-                .size(48.dp)
-                .clip(CircleShape)
-                .background(Color.Gray),
-            contentScale = ContentScale.Crop
->>>>>>> origin/messaging-announcement
+            tint = notification.color
         )
 
         Spacer(modifier = Modifier.width(16.dp))
@@ -202,11 +158,7 @@ fun NotificationItem(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-<<<<<<< HEAD
                 text = notification.getTimeAgo(),
-=======
-                text = formatDate(notification.createdAt),
->>>>>>> origin/messaging-announcement
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.outline
             )
@@ -222,18 +174,3 @@ fun NotificationItem(
     }
 }
 
-<<<<<<< HEAD
-
-=======
-private fun formatDate(dateString: String): String {
-    return try {
-        val inputFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault())
-        inputFormat.timeZone = TimeZone.getTimeZone("UTC")
-        val date = inputFormat.parse(dateString)
-        val outputFormat = SimpleDateFormat("dd MMM HH:mm", Locale.getDefault())
-        outputFormat.format(date ?: Date())
-    } catch (e: Exception) {
-        dateString
-    }
-}
->>>>>>> origin/messaging-announcement

@@ -12,20 +12,12 @@ plugins {
 
 android {
     namespace = "com.example.esprit"
-<<<<<<< HEAD
     compileSdk = 34
-=======
-    compileSdk = 36
->>>>>>> origin/messaging-announcement
 
     defaultConfig {
         applicationId = "com.example.esprit"
         minSdk = 24
-<<<<<<< HEAD
-        targetSdk = 34
-=======
         targetSdk = 36
->>>>>>> origin/messaging-announcement
         versionCode = 1
         versionName = "1.0"
 
@@ -101,15 +93,11 @@ dependencies {
     // DataStore
     implementation("androidx.datastore:datastore-preferences:1.1.1")
 
-<<<<<<< HEAD
-=======
-    // Room (local cache)
+    // Room
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
     kapt("androidx.room:room-compiler:2.6.1")
 
-
->>>>>>> origin/messaging-announcement
     // Retrofit + Gson
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
@@ -146,12 +134,9 @@ dependencies {
         exclude(group = "org.json", module = "json")
     }
 
-<<<<<<< HEAD
     // ZXing for QR codes
     implementation("com.google.zxing:core:3.5.2")
 
-=======
->>>>>>> origin/messaging-announcement
 }
 
 // enforce JavaPoet version in this module too

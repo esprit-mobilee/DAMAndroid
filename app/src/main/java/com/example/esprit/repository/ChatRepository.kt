@@ -4,6 +4,7 @@ import com.example.esprit.model.chat.ConversationDto
 import com.example.esprit.model.chat.MessageDto
 import com.example.esprit.network.ApiService
 import com.example.esprit.network.SocketManager
+import kotlinx.coroutines.flow.asSharedFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -17,6 +18,14 @@ class ChatRepository @Inject constructor(
     val messageUpdates = socketManager.messageUpdates
     val messageDeletions = socketManager.messageDeletions
     val readReceipts = socketManager.readReceipts
+    
+    // Local flow for sent messages to update UI instantly across ViewModels
+    private val _sentMessages = kotlinx.coroutines.flow.MutableSharedFlow<MessageDto>()
+    val sentMessages = _sentMessages.asSharedFlow()
+
+    suspend fun emitSentMessage(message: MessageDto) {
+        _sentMessages.emit(message)
+    }
 
     fun connect(userId: String) { 
         socketManager.connect(userId)
@@ -79,7 +88,7 @@ class ChatRepository @Inject constructor(
 
     suspend fun getConversations(userId: String): Result<List<ConversationDto>> {
         return try {
-            val conversations = apiService.getClubChatConversations(userId)
+            val conversations = apiService.getConversations(userId)
             Result.success(conversations)
         } catch (e: Exception) {
             Result.failure(e)
@@ -100,6 +109,24 @@ class ChatRepository @Inject constructor(
             val req = com.example.esprit.model.chat.TranslateRequest(messageId, targetLang)
             val res = apiService.translateMessage(req)
             Result.success(res)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getUnifiedConversations(userId: String): Result<List<com.example.esprit.model.chat.UnifiedConversationDto>> {
+        return try {
+            val list = apiService.getUnifiedConversations(userId)
+            Result.success(list)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getContacts(userId: String): Result<List<com.example.esprit.model.User>> {
+        return try {
+            val list = apiService.getContacts(userId)
+            Result.success(list)
         } catch (e: Exception) {
             Result.failure(e)
         }

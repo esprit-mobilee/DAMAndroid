@@ -52,6 +52,12 @@ class ChatViewModel @Inject constructor(
     private val _translations = MutableStateFlow<Map<String, String>>(emptyMap())
     val translations = _translations.asStateFlow()
 
+    private val _summary = MutableStateFlow<String?>(null)
+    val summary = _summary.asStateFlow()
+
+    private val _isLoadingSummary = MutableStateFlow(false)
+    val isLoadingSummary = _isLoadingSummary.asStateFlow()
+
     private var currentClubId: String? = null
     private var currentPartnerId: String? = null
 
@@ -231,6 +237,11 @@ class ChatViewModel @Inject constructor(
             recipientId = currentPartnerId,
             replyTo = safeReplyTo
         )
+        
+        // Notify other ViewModels (MessagesViewModel) for sorting
+        viewModelScope.launch {
+            chatRepository.emitSentMessage(optimisticMessage)
+        }
     }
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -276,8 +287,14 @@ class ChatViewModel @Inject constructor(
                     type = "VOICE",
                     attachmentUrl = url,
                     replyTo = safeReplyTo,
+
                     recipientId = currentPartnerId
                 )
+
+                // Notify other ViewModels
+                viewModelScope.launch {
+                    chatRepository.emitSentMessage(optimisticMessage)
+                }
             }
         }
     }
@@ -325,8 +342,14 @@ class ChatViewModel @Inject constructor(
                     type = "IMAGE",
                     attachmentUrl = url,
                     replyTo = safeReplyTo,
+
                     recipientId = currentPartnerId
                 )
+
+                // Notify other ViewModels
+                viewModelScope.launch {
+                    chatRepository.emitSentMessage(optimisticMessage)
+                }
             }
         }
     }
@@ -390,5 +413,42 @@ class ChatViewModel @Inject constructor(
                 android.util.Log.e("ChatViewModel", "Translation failed", result.exceptionOrNull())
             }
         }
+    }
+    fun markAsRead(messageId: String) {
+        val user = _currentUser.value ?: return
+        val userId = user.id ?: return
+        // Only mark if not already read by me? 
+        // Backend handles duplicates via $addToSet, so safe to call.
+        val clubId = currentClubId ?: "" // Optional for optimization
+        chatRepository.markAsRead(messageId, userId, clubId)
+    }
+
+    fun summarizeChat() {
+        val partnerId = currentPartnerId ?: return
+        val userId = _currentUser.value?.id ?: return
+
+        viewModelScope.launch {
+            _isLoadingSummary.value = true
+            try {
+                val response = apiService.summarizeAllDirectMessages(userId, partnerId)
+                _summary.value = response.summary
+            } catch (e: Exception) {
+                e.printStackTrace()
+                // You might want to handle error display here
+            } finally {
+                _isLoadingSummary.value = false
+            }
+        }
+    }
+
+    fun clearSummary() {
+        _summary.value = null
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun sendGoogleMeetLink() {
+        val link = com.example.esprit.util.GoogleMeetGenerator.generateLink()
+        val content = "🗓 Réunion Google Meet\n$link"
+        sendMessage(content, "TEXT")
     }
 }

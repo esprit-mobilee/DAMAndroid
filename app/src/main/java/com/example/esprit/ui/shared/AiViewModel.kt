@@ -69,7 +69,7 @@ class AiViewModel @Inject constructor(
     }
 
     // SAVE SELECTED
-    fun save(senderId: String) {
+    fun save(senderId: String, onComplete: (Boolean) -> Unit) {
         val state = _uiState.value
         val index = state.selectedIndex ?: return
 
@@ -84,8 +84,10 @@ class AiViewModel @Inject constructor(
                     selectedIndex = index
                 )
                 _uiState.update { it.copy(isLoading = false, saved = saved) }
+                onComplete(true)
             } catch (e: Exception) {
                 _uiState.update { it.copy(isLoading = false, error = e.message) }
+                onComplete(false)
             }
         }
     }

@@ -4,10 +4,14 @@ import com.example.esprit.util.UiState
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import java.io.IOException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import retrofit2.HttpException
 
 suspend inline fun <T> safeCall(noinline block: suspend () -> T): UiState<T> = try {
-    UiState.Success(block())
+    withContext(Dispatchers.IO) {
+        UiState.Success(block())
+    }
 } catch (e: HttpException) {
     val errorMessage = try {
         val errorBody = e.response()?.errorBody()?.string()

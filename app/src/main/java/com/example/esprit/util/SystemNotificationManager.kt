@@ -68,13 +68,13 @@ class SystemNotificationManager @Inject constructor(
         )
 
         val notificationBuilder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(notification.type.getIcon())
-            .setContentTitle(notification.type.getTitle())
+            .setSmallIcon(notification.iconResId)
+            .setContentTitle(notification.typeTitle)
             .setContentText(notification.message)
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
-            .setColor(notification.type.getColor().hashCode())
+            .setColor(notification.color.hashCode())
             .setStyle(
                 NotificationCompat.BigTextStyle()
                     .bigText(notification.message)

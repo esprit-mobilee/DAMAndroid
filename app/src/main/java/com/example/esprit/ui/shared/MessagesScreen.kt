@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-package com.example.esprit.ui.shared
-
-=======
 package com.example.esprit.ui.shared
 
 import android.net.Uri
@@ -42,7 +38,8 @@ data class ConversationUi(
     val time: String,
     val unreadCount: Int = 0,
     val roleLabel: String? = null,
-    val isHighlighted: Boolean = false
+    val isHighlighted: Boolean = false,
+    val type: String = "DIRECT"
 )
 
 // ================================
@@ -74,14 +71,29 @@ fun MessagesScreen(
 
     var searchQuery by remember { mutableStateOf("") }
 
-    val conversations = vm.conversations.map { dto ->
-        ConversationUi(
-            id = dto.userId,
-            title = dto.fullName ?: "Utilisateur",
-            lastMessage = dto.lastMessage ?: "",
-            time = dto.lastMessageTime ?: "",
-            roleLabel = dto.role
-        )
+    val conversations = vm.items.map { item ->
+        when (item) {
+            is UnifiedConversation.Direct -> {
+                ConversationUi(
+                    id = item.data.userId,
+                    title = item.data.fullName ?: "Utilisateur",
+                    lastMessage = item.data.lastMessage ?: "",
+                    time = item.data.lastMessageTime ?: "",
+                    roleLabel = item.data.role,
+                    type = "DIRECT"
+                )
+            }
+            is UnifiedConversation.Club -> {
+                ConversationUi(
+                    id = item.data.id,
+                    title = item.data.name,
+                    lastMessage = "Discussion de groupe",
+                    time = "", // TODO: Fetch separate time or ignore
+                    roleLabel = "Club",
+                    type = "CLUB"
+                )
+            }
+        }
     }.filter {
         it.title.contains(searchQuery, ignoreCase = true) ||
                 it.lastMessage.contains(searchQuery, ignoreCase = true)
@@ -121,23 +133,39 @@ fun MessagesScreen(
                 singleLine = true
             )
 
-            // 📩 Liste des conversations
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(conversations) { conv ->
-                    ConversationRow(
-                        conv = conv,
-                        onClick = {
-                            val encodedName = Uri.encode(conv.title)
-
-                            // ✅ NAVIGATION VERS TON ChatScreen (IA)
-                            navController.navigate(
-                                Destinations.privateChatSharedRoute(
-                                    peerId = conv.id,
-                                    peerName = encodedName
-                                )
-                            )
-                        }
-                    )
+            if (vm.loading.value) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else if (conversations.isEmpty()) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Aucune conversation")
+                }
+            } else {
+                // 📩 Liste des conversations
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    items(conversations) { conv ->
+                        ConversationRow(
+                            conv = conv,
+                            onClick = {
+                                val encodedName = Uri.encode(conv.title)
+                                if (conv.type == "CLUB") {
+                                    // Club Chat
+                                    navController.navigate(
+                                        Destinations.clubChatRoute(conv.id, encodedName)
+                                    )
+                                } else {
+                                    // Direct Chat (AI supported)
+                                    navController.navigate(
+                                        Destinations.privateChatSharedRoute(
+                                            peerId = conv.id,
+                                            peerName = encodedName
+                                        )
+                                    )
+                                }
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -242,4 +270,3 @@ fun ConversationRow(
         }
     }
 }
->>>>>>> origin/messaging-announcement

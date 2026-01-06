@@ -9,13 +9,19 @@ data class MessageDto(
     val recipientId: String? = null,
     val senderId: ChatUserDto,
     val content: String,
-    val type: String = "TEXT", // TEXT, IMAGE, VOICE, GIF
-    val attachmentUrl: String? = null,
+    @SerializedName("type") val type: String = "TEXT",
+    @SerializedName(value = "attachmentUrl", alternate = ["attachment_url", "fileUrl", "file_url"]) val attachmentUrl: String? = null,
     val createdAt: String,
     val reactions: List<ReactionDto> = emptyList(),
     val isEdited: Boolean = false,
     val isDeleted: Boolean = false,
-    val replyTo: ReplyDto? = null
+    val replyTo: ReplyDto? = null,
+    val readBy: List<ReadReceiptDto> = emptyList()
+)
+
+data class ReadReceiptDto(
+    val userId: String,
+    val readAt: String
 )
 
 data class ChatUserDto(

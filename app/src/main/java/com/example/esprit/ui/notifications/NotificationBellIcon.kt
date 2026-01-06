@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
 
 /**
  * Notification bell icon with unread count badge
@@ -28,30 +29,33 @@ fun NotificationBellIcon(
 ) {
     Box(
         modifier = modifier
-            .clickable(onClick = onClick)
-            .padding(8.dp)
+            .size(40.dp)
+            .background(Color(0xFF2C3E50), CircleShape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
     ) {
         Icon(
             imageVector = Icons.Default.Notifications,
             contentDescription = "Notifications",
-            tint = MaterialTheme.colorScheme.onSurface
+            tint = Color.White,
+            modifier = Modifier.size(24.dp)
         )
         
         // Badge for unread count
         if (unreadCount > 0) {
             Box(
                 modifier = Modifier
-                    .size(18.dp)
-                    .background(Color.Red, CircleShape)
+                    .size(16.dp)
+                    .background(Color(0xFFD32F2F), CircleShape)
                     .align(Alignment.TopEnd)
-                    .offset(x = 4.dp, y = (-4).dp),
+                    .offset(x = 2.dp, y = (-2).dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = if (unreadCount > 99) "99+" else unreadCount.toString(),
                     color = Color.White,
-                    fontSize = 10.sp,
-                    style = MaterialTheme.typography.labelSmall
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold
                 )
             }
         }

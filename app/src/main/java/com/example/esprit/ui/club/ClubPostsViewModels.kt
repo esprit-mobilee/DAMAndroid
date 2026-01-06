@@ -17,10 +17,7 @@ import javax.inject.Inject
 data class PostsUiState(
     val loading: Boolean = false,
     val posts: List<ClubPostDto> = emptyList(),
-<<<<<<< HEAD
     val selectedPost: ClubPostDto? = null,
-=======
->>>>>>> origin/messaging-announcement
     val error: String? = null
 )
 
@@ -55,7 +52,6 @@ class ClubPostsViewModel @Inject constructor(
             when (val res = repo.list(clubId)) {
                 is UiState.Success -> {
                     android.util.Log.d("ClubPostsViewModel", "Loaded ${res.data.size} posts")
-<<<<<<< HEAD
                     _uiState.value = _uiState.value.copy(posts = res.data, loading = false)
                 }
                 is UiState.Error -> {
@@ -78,15 +74,6 @@ class ClubPostsViewModel @Inject constructor(
                     _uiState.value = _uiState.value.copy(error = res.message, loading = false)
                 }
                 UiState.Loading -> _uiState.value = _uiState.value.copy(loading = true)
-=======
-                    _uiState.value = PostsUiState(posts = res.data)
-                }
-                is UiState.Error -> {
-                    android.util.Log.e("ClubPostsViewModel", "Error loading posts: ${res.message}")
-                    _uiState.value = PostsUiState(error = res.message)
-                }
-                UiState.Loading -> _uiState.value = PostsUiState(loading = true)
->>>>>>> origin/messaging-announcement
             }
         }
     }

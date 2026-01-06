@@ -14,6 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AiAnnouncementsScreen(
     senderId: String,           // ID du user ACTUEL (admin/prof)
@@ -27,20 +28,50 @@ fun AiAnnouncementsScreen(
         .padding(16.dp)
     ) {
 
-        // INPUTS
-        OutlinedTextField(
-            value = state.audience,
-            onValueChange = viewModel::setAudience,
-            label = { Text("Audience (ex: students)") },
+        // AUDIENCE DROPDOWN
+        var expanded by remember { mutableStateOf(false) }
+        val options = listOf("students", "administrative staff", "both")
+        
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = !expanded },
             modifier = Modifier.fillMaxWidth()
-        )
+        ) {
+            OutlinedTextField(
+                value = state.audience,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Target Audience") },
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                modifier = Modifier
+                    .menuAnchor()
+                    .fillMaxWidth()
+            )
+            
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                options.forEach { selectionOption ->
+                    DropdownMenuItem(
+                        text = { Text(selectionOption) },
+                        onClick = {
+                            viewModel.setAudience(selectionOption)
+                            expanded = false
+                        },
+                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                    )
+                }
+            }
+        }
 
         Spacer(modifier = Modifier.height(8.dp))
 
         OutlinedTextField(
             value = state.instruction,
             onValueChange = viewModel::setInstruction,
-            label = { Text("Instruction (prompt)") },
+            label = { Text("Instruction (ex: remind about the exam tomorrow)") },
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -93,8 +124,9 @@ fun AiAnnouncementsScreen(
         // SAVE BUTTON
         Button(
             onClick = {
-                viewModel.save(senderId)
-                onSaved()
+                viewModel.save(senderId) { success ->
+                    if (success) onSaved()
+                }
             },
             enabled = state.selectedIndex != null && !state.isLoading,
             modifier = Modifier.fillMaxWidth()
