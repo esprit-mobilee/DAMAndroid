@@ -173,6 +173,7 @@ class GeminiPredictionService @Inject constructor() {
     /**
      * Parse AI response to PredictionResult
      */
+    @RequiresApi(Build.VERSION_CODES.O)
     private fun parsePredictionResponse(responseText: String, documentType: String): PredictionResult {
         return try {
             // Remove markdown code blocks if present
@@ -200,6 +201,7 @@ class GeminiPredictionService @Inject constructor() {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     private fun parseSmartTipResponse(responseText: String): SmartMessage {
         return try {
             val cleanJson = responseText

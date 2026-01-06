@@ -1,5 +1,7 @@
  package com.example.esprit.ui.demande
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.esprit.model.CreateDocumentRequestPayload
@@ -39,6 +41,7 @@ data class DocumentRequestUiState(
     val isLoadingPrediction: Boolean = false
 )
 
+@RequiresApi(Build.VERSION_CODES.O)
 @HiltViewModel
 class DocumentRequestViewModel @Inject constructor(
     private val repository: DocumentRequestRepository,
@@ -188,6 +191,7 @@ class DocumentRequestViewModel @Inject constructor(
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     private fun loadAIPrediction(type: String) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoadingPrediction = true) }
